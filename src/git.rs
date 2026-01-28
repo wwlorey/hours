@@ -92,8 +92,17 @@ pub fn git_commit(data_dir: &Path, message: &str) -> Result<()> {
     Ok(())
 }
 
+fn current_branch(data_dir: &Path) -> Result<String> {
+    let output = run_git(data_dir, &["rev-parse", "--abbrev-ref", "HEAD"])?;
+    if !output.status.success() {
+        bail!("Failed to determine current branch");
+    }
+    Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
+}
+
 pub fn git_push(data_dir: &Path, remote: &str) -> Result<()> {
-    let output = run_git(data_dir, &["push", "-u", remote, "main"])?;
+    let branch = current_branch(data_dir).unwrap_or_else(|_| "main".to_string());
+    let output = run_git(data_dir, &["push", "-u", remote, &branch])?;
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
         eprintln!(

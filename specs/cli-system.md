@@ -43,12 +43,20 @@ Add hours incrementally to a week. Each invocation adds to the existing total fo
 
 **Interactive flow:**
 
+The interactive flow uses nested screens with back-navigation. `Esc`/`q` goes back one level; `Ctrl+C` exits immediately from any screen.
+
 1. Display week selector with current week pre-selected (see [Interactive Prompts § Week Selector](#week-selector)).
-2. User confirms or navigates to a different week.
-3. Display category selector (see [Interactive Prompts § Category Selector](#category-selector)).
-4. Prompt for hours (decimal number, must be ≥ 0).
-5. Display confirmation: `Added 3.5 direct hours -> week total: 12.5 direct`.
-6. Save data, git commit, git push (see [git-sync.md](./git-sync.md)).
+   - `Esc`/`q` exits the command.
+   - `Enter` confirms the week and proceeds to step 2.
+2. Display category selector (see [Interactive Prompts § Category Selector](#category-selector)).
+   - `Esc`/`q` returns to step 1 (week selector).
+   - `Enter` confirms the category and proceeds to step 3.
+3. Prompt for hours (decimal number, must be ≥ 0).
+   - `Esc`/`q` returns to step 2 (category selector).
+   - `Enter` submits the value.
+4. Save data, git commit, git push synchronously (see [git-sync.md](./git-sync.md)).
+5. Flash confirmation for ~1 second: `Added 3.5 Direct (client contact) hours -> week total: 12.5`.
+6. Return to step 2 (category selector for the same week). The user can add more entries or press `Esc`/`q` to return to the week selector.
 
 If the selected week does not yet exist in `hours.json`, it is created with all categories at `0.0` before adding.
 
@@ -75,11 +83,20 @@ Set the total hours for any or all categories in a specific week. Overwrites exi
 
 **Interactive flow:**
 
+The interactive flow uses nested screens with back-navigation, matching the `hours add` navigation model. `Esc`/`q` goes back one level; `Ctrl+C` exits immediately.
+
 1. Display week selector (all weeks with existing data, plus current week).
-2. Display current values for the selected week.
-3. For each category, show current value and prompt for new value. Press Enter to keep the current value unchanged.
-4. Display summary of changes.
-5. Save data, git commit, git push.
+   - `Esc`/`q` exits the command.
+   - `Enter` confirms the week and proceeds to step 2.
+2. Display category selector showing current values for each category (e.g., `Direct (client contact)    14.5 hrs`).
+   - `Esc`/`q` returns to step 1 (week selector).
+   - `Enter` confirms the category and proceeds to step 3.
+3. Prompt for new value with current value shown as default. Press Enter with no input to keep the current value.
+   - `Esc`/`q` returns to step 2 (category selector).
+   - `Enter` submits the new value.
+4. Overwrite the category value, save data, git commit, git push synchronously.
+5. Flash confirmation for ~1 second.
+6. Return to step 2 (category selector for the same week). The user can edit more categories or press `Esc`/`q` to return to the week selector.
 
 **Non-interactive mode:**
 
@@ -177,6 +194,23 @@ Every mutating command (`init`, `add`, `edit`) accepts a `--non-interactive` fla
 
 All interactive prompts are custom-built on the `crossterm` crate for full control over key handling and rendering. They live in `src/ui/prompts.rs`.
 
+### Navigation Model
+
+The `hours add` and `hours edit` commands use a nested screen model with back-navigation:
+
+```
+Week Selector ←→ Category Selector ←→ Input Prompt
+      │                │                    │
+    Esc/q            Esc/q                Esc/q
+      ↓                ↓                    ↓
+    Exit         Week Selector       Category Selector
+```
+
+- `Esc`/`q` goes back one level at every screen.
+- At the week selector (outermost level), `Esc`/`q` exits the command.
+- `Ctrl+C` exits immediately from any screen, discarding any in-progress input.
+- After a successful entry, the UI flashes a confirmation message (~1 second) and returns to the category selector for the same week.
+
 ### Key Bindings
 
 | Key | Action |
@@ -184,9 +218,11 @@ All interactive prompts are custom-built on the `crossterm` crate for full contr
 | `j` / `↓` | Move selection down |
 | `k` / `↑` | Move selection up |
 | `Enter` | Confirm selection |
-| `Esc` / `q` | Cancel and exit the command |
+| `Esc` / `q` | Go back one level (exit at week selector) |
 | `g` | Jump to first item |
 | `G` | Jump to last item |
+| `?` | Show help overlay |
+| `Ctrl+C` | Exit immediately |
 
 ### Week Selector
 
@@ -205,12 +241,24 @@ The list includes all weeks from the licensure start date (see [config-system.md
 
 ### Category Selector
 
+For `hours add`, displays category names:
+
 ```
 Select category:
   > Individual Supervision
     Group Supervision
     Direct (client contact)
     Indirect
+```
+
+For `hours edit`, displays category names with current values:
+
+```
+Select category:
+  > Individual Supervision          1.0 hrs
+    Group Supervision               2.0 hrs
+    Direct (client contact)        14.5 hrs
+    Indirect                        6.0 hrs
 ```
 
 ### Number Input
@@ -228,3 +276,38 @@ Direct [14.5]: _
 ```
 
 Press Enter with no input to keep the current value.
+
+### Help Overlay
+
+Pressing `?` on any interactive screen displays a full-screen help overlay listing all available key bindings. The overlay is dismissed by pressing any key, returning to the previous screen.
+
+```
+Key Bindings
+────────────────────────────────
+j / ↓         Move down
+k / ↑         Move up
+Enter         Confirm selection
+Esc / q       Go back
+g             Jump to first item
+G             Jump to last item
+?             Show this help
+Ctrl+C        Exit immediately
+
+Press any key to dismiss...
+```
+
+Navigation keys are also documented in `hours add --help` and `hours edit --help`.
+
+### Confirmation Flash
+
+After a successful save, a brief confirmation message is displayed for ~1 second before the UI returns to the category selector:
+
+```
+Added 3.5 Direct (client contact) hours -> week total: 12.5
+```
+
+For `hours edit`:
+
+```
+Set Direct (client contact) to 14.5 hrs for week of 2025-01-28
+```

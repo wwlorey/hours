@@ -543,3 +543,235 @@ All tests use isolated temp directories via `HOURS_CONFIG_DIR`, `HOURS_DATA_DIR`
 - Integration tests that set `HOURS_CONFIG_DIR` and `HOURS_DATA_DIR` environment variables achieve full isolation. Each test creates its own `TempDir` instances, so parallel test execution works without conflicts.
 - The `add` command always adds to the current week when `--week` is not specified, so tests that need deterministic week dates should always use `--week` with a known Tuesday date.
 - Helper functions (`init_env`, `add_hours`, `add_hours_to_week`, `load_data`) reduce boilerplate significantly across 19 tests. The JSON data file can be read directly for precise assertions rather than relying solely on CLI output.
+
+---
+
+## Phase 11: Interactive Flow Redesign (Looping Navigation)
+
+**Spec references:**
+- [cli-system.md § `hours add` Interactive flow](../specs/cli-system.md#hours-add)
+- [cli-system.md § `hours edit` Interactive flow](../specs/cli-system.md#hours-edit)
+- [cli-system.md § Navigation Model](../specs/cli-system.md#navigation-model)
+- [cli-system.md § Key Bindings](../specs/cli-system.md#key-bindings)
+- [cli-system.md § Help Overlay](../specs/cli-system.md#help-overlay)
+- [cli-system.md § Confirmation Flash](../specs/cli-system.md#confirmation-flash)
+- [cli-system.md § Category Selector](../specs/cli-system.md#category-selector) (edit mode with current values)
+- [git-sync.md § Commit Behavior](../specs/git-sync.md#commit-behavior)
+
+**Overview:**
+
+Replace the linear one-shot interactive flow in `hours add` and `hours edit` with nested loops and back-navigation. After entering hours, the UI returns to the category selector for the same week instead of exiting. `Esc`/`q` goes back one level at every screen. Add a `?` key for an in-app help overlay and document navigation in `--help` text.
+
+**Source files to modify:**
+
+- `src/ui/prompts.rs` — Core UI changes:
+  - Add `PromptResult<T>` enum (replaces `Option<T>` returns)
+  - Add `Help` variant to `SelectAction`; distinguish `Back` (Esc/q) from `Exit` (Ctrl+C)
+  - Add `render_help_overlay()` function
+  - Add `flash_confirmation()` function
+  - Add `select_category_with_values()` for edit mode category display
+  - Update return types of `select_from_list`, `select_week`, `select_category`, `input_hours`
+  - Add `?` key handling in `read_select_key()` and `input_hours()`
+- `src/ui/mod.rs` — Update re-exports:
+  - Add `PromptResult`, `flash_confirmation`, `select_category_with_values`
+- `src/cli/add.rs` — Rewrite interactive branch:
+  - Replace linear flow (lines 59–71) with nested `'week_loop` / `'category_loop`
+  - Move save + git sync inside inner loop
+  - Call `flash_confirmation()` after each save, then `continue 'category_loop`
+  - Match on `PromptResult::Back` to go up one level, `PromptResult::Exit` to break out
+  - Add `#[command(after_help = "...")]` for navigation key documentation
+- `src/cli/edit.rs` — Rewrite interactive branch:
+  - Replace sequential-all-categories flow (lines 95–124) with nested loops
+  - Use `select_category_with_values()` to show current values per category
+  - Single-category-at-a-time editing with save + flash after each
+  - Add `#[command(after_help = "...")]` for navigation key documentation
+
+**Documentation to review:**
+- `crossterm` crate docs: `event::read()`, `KeyCode`, `KeyModifiers` for `?` key handling
+- `std::thread::sleep` for confirmation flash duration
+
+---
+
+### Step 1: Add new types and functions (non-breaking, additive)
+
+- [ ] Add `PromptResult<T>` enum to `src/ui/prompts.rs` (after line 14, after imports):
+  ```
+  pub enum PromptResult<T> {
+      Value(T),  // User confirmed a selection/input
+      Back,      // Esc/q -- go back one level
+      Exit,      // Ctrl+C -- exit immediately
+  }
+  ```
+  Per [cli-system.md § Navigation Model](../specs/cli-system.md#navigation-model): Esc/q goes back one level, Ctrl+C exits immediately.
+
+- [ ] Add `render_help_overlay()` to `src/ui/prompts.rs`:
+  - Clear screen, render key bindings table per [cli-system.md § Help Overlay](../specs/cli-system.md#help-overlay)
+  - Wait for any key press, then return
+  - View: `src/ui/prompts.rs:62-86` (`render_list`) for rendering pattern reference
+
+- [ ] Add `pub fn flash_confirmation(message: &str) -> Result<()>` to `src/ui/prompts.rs`:
+  - Clear screen, print message, sleep ~1 second, return
+  - Per [cli-system.md § Confirmation Flash](../specs/cli-system.md#confirmation-flash)
+
+- [ ] Add `pub fn select_category_with_values(entry: &WeekEntry) -> Result<PromptResult<Category>>` to `src/ui/prompts.rs`:
+  - Format items as `"{long_name}    {value:.1} hrs"` with alignment
+  - Per [cli-system.md § Category Selector](../specs/cli-system.md#category-selector) (edit mode display)
+  - View: `src/ui/prompts.rs:179-189` (`select_category`) for pattern reference
+  - View: `src/data/model.rs:18-70` (`WeekEntry`) for `entry.get(cat)` API
+
+- [ ] Update `src/ui/mod.rs` exports (line 3):
+  - Add `PromptResult`, `flash_confirmation`, `select_category_with_values` to the `pub use` statement
+
+- [ ] Verify: `cargo build --workspace` passes (all new code is additive, no callers changed yet)
+
+---
+
+### Step 2: Update SelectAction and key reading
+
+- [ ] Rename `SelectAction::Cancel` to `SelectAction::Back` in `src/ui/prompts.rs` (line 37):
+  - View: `src/ui/prompts.rs:31-38` (enum definition)
+
+- [ ] Add `SelectAction::Exit` and `SelectAction::Help` variants to the enum
+
+- [ ] Update `read_select_key()` in `src/ui/prompts.rs` (lines 40-60):
+  - Map `Ctrl+C` → `SelectAction::Exit` (currently maps to `Cancel`)
+  - Map `Esc`/`q` → `SelectAction::Back` (rename from `Cancel`)
+  - Map `?` → `SelectAction::Help`
+  - View: `src/ui/prompts.rs:40-60` for current key mapping
+
+---
+
+### Step 3: Update return types (breaking change, requires caller updates)
+
+- [ ] Update `select_from_list()` return type from `Result<Option<usize>>` to `Result<PromptResult<usize>>`:
+  - View: `src/ui/prompts.rs:88-132`
+  - `SelectAction::Confirm` → `PromptResult::Value(selected)`
+  - `SelectAction::Back` → `PromptResult::Back`
+  - `SelectAction::Exit` → `PromptResult::Exit`
+  - `SelectAction::Help` → call `render_help_overlay()`, redraw list, continue loop
+
+- [ ] Update `select_week()` return type from `Result<Option<NaiveDate>>` to `Result<PromptResult<NaiveDate>>`:
+  - View: `src/ui/prompts.rs:153-177`
+  - Pattern match on `PromptResult` variants instead of `Option`
+
+- [ ] Update `select_category()` return type from `Result<Option<Category>>` to `Result<PromptResult<Category>>`:
+  - View: `src/ui/prompts.rs:179-189`
+  - Pattern match on `PromptResult` variants
+
+- [ ] Update `input_hours()` return type from `Result<Option<f64>>` to `Result<PromptResult<f64>>`:
+  - View: `src/ui/prompts.rs:191-266`
+  - `Ctrl+C` → `PromptResult::Exit`
+  - `Esc` → `PromptResult::Back`
+  - Valid input → `PromptResult::Value(val)`
+  - Empty input with `current_value` → `PromptResult::Value(current_value)`
+  - Add `?` key handling: call `render_help_overlay()`, redraw prompt, continue loop
+
+---
+
+### Step 4: Rewrite `hours add` interactive branch
+
+- [ ] Rewrite `src/cli/add.rs` interactive branch (lines 59-71) as nested loops:
+  - View: `src/cli/add.rs:26-96` for full `run()` function
+  - View: `src/data/model.rs:57-64` for `WeekEntry::add()` method
+  - View: `src/data/store.rs:18-44` for `store::save()` function
+  - View: `src/git.rs:116-143` for `git_sync()` function
+
+  ```
+  Outer 'week_loop:
+    select_week() →
+      Exit → return Ok(())
+      Back → return Ok(())
+      Value(week_start) →
+        Inner 'category_loop:
+          select_category() →
+            Exit → return Ok(())
+            Back → continue 'week_loop
+            Value(category) →
+              input_hours() →
+                Exit → return Ok(())
+                Back → continue 'category_loop
+                Value(hours) →
+                  find/create entry, entry.add(category, hours)
+                  store::save()
+                  git::git_sync()
+                  flash_confirmation()
+                  continue 'category_loop
+  ```
+
+- [ ] Non-interactive branch (lines 33-58) remains completely unchanged
+  - View: `src/cli/add.rs:33-58`
+
+- [ ] Add `#[command(after_help = "...")]` to `AddArgs` struct with navigation key documentation:
+  - View: `src/cli/add.rs:11-24` (AddArgs definition)
+  - Per [cli-system.md § Help Overlay](../specs/cli-system.md#help-overlay): keys documented in `--help`
+
+---
+
+### Step 5: Rewrite `hours edit` interactive branch
+
+- [ ] Rewrite `src/cli/edit.rs` interactive branch (lines 95-124) as nested loops:
+  - View: `src/cli/edit.rs:36-127` for full `run()` function
+  - View: `src/data/model.rs:65-70` for `WeekEntry::set()` method
+  - Replace sequential iteration over `Category::ALL` with `select_category_with_values()` selector
+
+  ```
+  Outer 'week_loop:
+    select_week() →
+      Exit → return Ok(())
+      Back → return Ok(())
+      Value(week_start) →
+        find/create entry (immutable lookup for display)
+        Inner 'category_loop:
+          select_category_with_values(entry) →
+            Exit → return Ok(())
+            Back → continue 'week_loop
+            Value(category) →
+              input_hours(prompt, Some(current_value)) →
+                Exit → return Ok(())
+                Back → continue 'category_loop
+                Value(new_val) →
+                  entry.set(category, new_val)  (mutable borrow)
+                  store::save()
+                  git::git_sync()
+                  flash_confirmation()
+                  continue 'category_loop
+  ```
+
+- [ ] Non-interactive branch (lines 43-94) remains completely unchanged
+  - View: `src/cli/edit.rs:43-94`
+
+- [ ] Borrow checker consideration: use immutable `data.weeks.iter().find()` for `select_category_with_values()` display, then `data.weeks.iter_mut().find()` for mutation — each in its own scope
+  - View: `src/cli/edit.rs:103-109` for current borrow pattern
+
+- [ ] Add `#[command(after_help = "...")]` to `EditArgs` struct:
+  - View: `src/cli/edit.rs:11-34` (EditArgs definition)
+
+---
+
+### Step 6: Validation
+
+- [ ] `cargo fmt --all`
+- [ ] `cargo clippy --workspace -- -D warnings`
+- [ ] `cargo build --workspace`
+- [ ] `cargo test --workspace` — all 19 existing integration tests must pass unchanged
+  - View: `tests/integration.rs` — all tests use `--non-interactive` mode, unaffected by interactive flow changes
+- [ ] Manual smoke test: `cargo run -- add` (interactive) — verify looping, back-navigation, help overlay, confirmation flash
+- [ ] Manual smoke test: `cargo run -- edit` (interactive) — verify category value display, single-category editing, looping
+
+---
+
+### Acceptance criteria
+
+- [ ] `hours add` interactive mode loops back to category selector after each entry per [cli-system.md § `hours add`](../specs/cli-system.md#hours-add)
+- [ ] `hours edit` interactive mode uses category selector with current values per [cli-system.md § `hours edit`](../specs/cli-system.md#hours-edit)
+- [ ] `Esc`/`q` goes back one level at every screen per [cli-system.md § Navigation Model](../specs/cli-system.md#navigation-model)
+- [ ] `Esc`/`q` at week selector exits the command per [cli-system.md § Navigation Model](../specs/cli-system.md#navigation-model)
+- [ ] `Ctrl+C` exits immediately from any screen per [cli-system.md § Key Bindings](../specs/cli-system.md#key-bindings)
+- [ ] `?` shows help overlay on all interactive screens per [cli-system.md § Help Overlay](../specs/cli-system.md#help-overlay)
+- [ ] Confirmation flash displays for ~1 second after each save per [cli-system.md § Confirmation Flash](../specs/cli-system.md#confirmation-flash)
+- [ ] Git commit+push happens synchronously after each entry per [git-sync.md § Commit Behavior](../specs/git-sync.md#commit-behavior)
+- [ ] `--help` text for `add` and `edit` documents navigation keys per [cli-system.md § Help Overlay](../specs/cli-system.md#help-overlay)
+- [ ] Non-interactive mode for both commands is completely unchanged
+- [ ] All existing integration tests pass
+- [ ] `cargo clippy --workspace -- -D warnings` passes
+- [ ] `cargo fmt --all` produces no changes

@@ -119,12 +119,18 @@ Phased build plan for the `hours` CLI tool. Each phase lists the spec references
 
 **Actions:**
 
-- [ ] Implement config structs with serde `Deserialize`
-- [ ] Implement `Config::load()` with env var override chain
-- [ ] Implement `Config::save()` for init command
-- [ ] Implement tilde expansion
-- [ ] Write unit tests for config loading from a temp TOML file
-- [ ] Write unit tests for env var overrides
+- [x] Implement config structs with serde `Deserialize` (and `Serialize` for save)
+- [x] Implement `Config::load()` with env var override chain
+- [x] Implement `Config::save()` for init command
+- [x] Implement tilde expansion
+- [x] Write unit tests for config loading from a temp TOML file
+- [x] Write unit tests for env var overrides
+
+**Lessons learned:**
+
+- Tests that use `env::set_var`/`env::remove_var` must be serialized with a `Mutex` since env vars are process-global and Rust tests run in parallel by default. A `static ENV_LOCK: Mutex<()>` acquired at the start of each env-touching test prevents races.
+- `Config` also needs `Serialize` (not just `Deserialize`) so `Config::save()` can serialize to TOML. Both derives are needed.
+- Added convenience methods `Config::data_dir()` and `Config::data_file()` for ergonomic path construction from the config, used by command handlers.
 
 ---
 

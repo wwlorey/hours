@@ -403,6 +403,7 @@ pub fn input_date(prompt: &str, must_be_tuesday: bool) -> Result<Option<NaiveDat
     }
 }
 
+#[allow(dead_code)]
 pub fn confirm(prompt: &str) -> Result<bool> {
     let _guard = RawModeGuard::enable()?;
     let mut stdout = io::stdout();

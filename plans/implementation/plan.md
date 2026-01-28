@@ -256,14 +256,22 @@ Phased build plan for the `hours` CLI tool. Each phase lists the spec references
 
 **Actions:**
 
-- [ ] Define full clap app with all subcommands and flags
-- [ ] Implement `init` command with both interactive and non-interactive paths
-- [ ] Implement `add` command with incremental hour accumulation
-- [ ] Implement `edit` command with value overwrite semantics
-- [ ] Implement `list` command with table and JSON output
-- [ ] Implement `summary` command with all four calculations
-- [ ] Implement `export` command shell (PDF generation in Phase 7)
-- [ ] Handle empty state gracefully in all read commands
+- [x] Define full clap app with all subcommands and flags
+- [x] Implement `init` command with both interactive and non-interactive paths
+- [x] Implement `add` command with incremental hour accumulation
+- [x] Implement `edit` command with value overwrite semantics
+- [x] Implement `list` command with table and JSON output
+- [x] Implement `summary` command with all four calculations
+- [x] Implement `export` command shell (PDF generation in Phase 7)
+- [x] Handle empty state gracefully in all read commands
+
+**Lessons learned:**
+
+- The clap app with all subcommands and flags was already defined in Phase 1 scaffolding — Phase 6 only needed to implement the `run()` functions.
+- Removing `#[allow(dead_code)]` from `main.rs` module declarations and `#[allow(unused_imports)]` from re-export modules should be done once the CLI commands actually use those modules, otherwise clippy `-D warnings` fails. The `data/mod.rs` re-exports turned out to be unnecessary since all CLI files use `crate::data::model::` directly.
+- The `confirm` prompt (from Phase 5) is not yet needed by any Phase 6 command handler. It needs `#[allow(dead_code)]` until a future phase uses it.
+- `comfy_table::Cell` with `add_attribute(Attribute::Bold)` provides the bold TOTALS row formatting — `Cell::new` must be used instead of plain strings for the totals row to apply attributes.
+- The `export` command calls `pdf::generate_report()` which is stubbed to return an error until Phase 7. This is intentional — the command shell handles path resolution and directory creation; PDF generation is the Phase 7 concern.
 
 ---
 

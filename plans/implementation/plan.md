@@ -298,14 +298,22 @@ Phased build plan for the `hours` CLI tool. Each phase lists the spec references
 
 **Actions:**
 
-- [ ] Evaluate `genpdf` font handling — if bundling fonts is too complex, implement with `printpdf` built-in fonts and manual layout
-- [ ] Implement document creation with US Letter size and 1" margins
-- [ ] Implement header section (title, dates)
-- [ ] Implement weekly hours table with column alignment
-- [ ] Implement totals row with bold formatting
-- [ ] Implement progress summary section
-- [ ] Create `exports/` subdirectory on demand
-- [ ] Test with empty data, single week, and many weeks (page break)
+- [x] Evaluate `genpdf` font handling — if bundling fonts is too complex, implement with `printpdf` built-in fonts and manual layout
+- [x] Implement document creation with US Letter size and 1" margins
+- [x] Implement header section (title, dates)
+- [x] Implement weekly hours table with column alignment
+- [x] Implement totals row with bold formatting
+- [x] Implement progress summary section
+- [x] Create `exports/` subdirectory on demand
+- [x] Test with empty data, single week, and many weeks (page break)
+
+**Lessons learned:**
+
+- `genpdf::fonts::Builtin` is for the higher-level `from_files()` API. When using `FontData::new()` directly (for `include_bytes!` font embedding), the second parameter is `Option<printpdf::BuiltinFont>`, not `Option<genpdf::fonts::Builtin>`. Passing `None` embeds the font data in the PDF (slightly larger file, but no external dependency and works universally).
+- In `genpdf` 0.2, `.styled()` wraps a `Paragraph` in a `StyledElement<Paragraph>` which does not expose `.aligned()`. The correct call order is `.aligned()` first, then `.styled()`: `Paragraph::new(text).aligned(Alignment::Right).styled(style)`.
+- Liberation Sans fonts (SIL Open Font License) are metrically identical to Helvetica and work well with `genpdf`. The four `.ttf` files are embedded at compile time via `include_bytes!()` — adding ~1.6 MB to the binary but eliminating any runtime font file dependency.
+- The `exports/` subdirectory creation is handled by the `export` CLI command (`src/cli/export.rs`), not by `pdf.rs`. The PDF module is purely responsible for rendering.
+- `genpdf` 0.2's `Margins::trbl(25.4, 25.4, 25.4, 25.4)` sets 1-inch margins (25.4 mm = 1 inch) on US Letter paper.
 
 ---
 

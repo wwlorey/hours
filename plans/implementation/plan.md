@@ -332,10 +332,16 @@ Phased build plan for the `hours` CLI tool. Each phase lists the spec references
 
 **Actions:**
 
-- [ ] Implement top-level error handling (print message, exit with code 1)
-- [ ] Verify full flow: `init` → `add` → `add` (incremental) → `edit` → `list` → `summary` → `export`
-- [ ] Test with `--non-interactive` and `--no-git` flags
-- [ ] Test env var overrides (`HOURS_CONFIG_DIR`, `HOURS_DATA_DIR`, `HOURS_NO_GIT`)
+- [x] Implement top-level error handling (print message, exit with code 1)
+- [x] Verify full flow: `init` → `add` → `add` (incremental) → `edit` → `list` → `summary` → `export`
+- [x] Test with `--non-interactive` and `--no-git` flags
+- [x] Test env var overrides (`HOURS_CONFIG_DIR`, `HOURS_DATA_DIR`, `HOURS_NO_GIT`)
+
+**Lessons learned:**
+
+- Top-level error handling (`eprintln!("Error: {e}")` + `process::exit(1)`) was already wired in Phase 6 as part of `main.rs`. No additional centralization of config/data loading was needed — each command handler loading its own config is the correct pattern since `init` creates config while all other commands require it.
+- Clap requires `allow_hyphen_values = true` on `f64` arguments to parse negative numbers passed with a space (e.g., `--hours -1.0`). Without it, `-1.0` is interpreted as an unknown flag. This was added to the `hours` field in `AddArgs` and all category fields in `EditArgs`.
+- `Iterator::sum::<f64>()` on an empty iterator returns `-0.0` (negative zero) in Rust, which displays as `-0.0`. Fix: add `+ 0.0` to normalize the sum, since IEEE 754 guarantees `-0.0 + 0.0 = 0.0`. The `round1()` helper was also patched: `if r == 0.0 { 0.0 } else { r }` to avoid propagating `-0.0` through JSON output.
 
 ---
 

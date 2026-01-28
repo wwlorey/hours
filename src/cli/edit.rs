@@ -13,16 +13,20 @@ pub struct EditArgs {
     #[arg(long, help = "Tuesday start date of the week (YYYY-MM-DD)")]
     pub week: Option<String>,
 
-    #[arg(long, help = "Individual supervision hours")]
+    #[arg(
+        long,
+        allow_hyphen_values = true,
+        help = "Individual supervision hours"
+    )]
     pub individual_supervision: Option<f64>,
 
-    #[arg(long, help = "Group supervision hours")]
+    #[arg(long, allow_hyphen_values = true, help = "Group supervision hours")]
     pub group_supervision: Option<f64>,
 
-    #[arg(long, help = "Direct client contact hours")]
+    #[arg(long, allow_hyphen_values = true, help = "Direct client contact hours")]
     pub direct: Option<f64>,
 
-    #[arg(long, help = "Indirect hours")]
+    #[arg(long, allow_hyphen_values = true, help = "Indirect hours")]
     pub indirect: Option<f64>,
 
     #[arg(long, help = "Run without interactive prompts")]

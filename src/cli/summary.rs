@@ -35,8 +35,8 @@ pub fn run(args: SummaryArgs) -> Result<()> {
     let today = Local::now().date_naive();
     let start_date = config.licensure.start_date;
 
-    let total_hours: f64 = data.weeks.iter().map(|w| w.total()).sum();
-    let direct_hours: f64 = data.weeks.iter().map(|w| w.direct).sum();
+    let total_hours: f64 = data.weeks.iter().map(|w| w.total()).sum::<f64>() + 0.0;
+    let direct_hours: f64 = data.weeks.iter().map(|w| w.direct).sum::<f64>() + 0.0;
 
     let months = months_between(start_date, today);
 
@@ -153,7 +153,12 @@ pub fn run(args: SummaryArgs) -> Result<()> {
 }
 
 fn round1(val: f64) -> f64 {
-    (val * 10.0).round() / 10.0
+    let r = (val * 10.0).round() / 10.0;
+    if r == 0.0 {
+        0.0
+    } else {
+        r
+    }
 }
 
 #[cfg(test)]
@@ -200,5 +205,28 @@ mod tests {
         assert!((round1(8.233) - 8.2).abs() < f64::EPSILON);
         assert!((round1(102.75) - 102.8).abs() < f64::EPSILON);
         assert!((round1(0.0) - 0.0).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn test_round1_negative_zero_normalized() {
+        let result = round1(-0.0);
+        assert!(result.is_sign_positive(), "round1(-0.0) should be +0.0");
+        assert!((result - 0.0).abs() < f64::EPSILON);
+
+        let result = round1(-0.0000001);
+        assert!(
+            result.is_sign_positive(),
+            "round1(-0.0000001) should be +0.0"
+        );
+    }
+
+    #[test]
+    fn test_empty_sum_normalization() {
+        let empty: Vec<f64> = vec![];
+        let sum: f64 = empty.iter().sum::<f64>() + 0.0;
+        assert!(
+            sum.is_sign_positive(),
+            "normalized empty sum should be +0.0"
+        );
     }
 }

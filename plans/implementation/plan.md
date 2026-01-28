@@ -156,11 +156,17 @@ Phased build plan for the `hours` CLI tool. Each phase lists the spec references
 
 **Actions:**
 
-- [ ] Implement git operations using `std::process::Command`
-- [ ] Implement commit message formatting per [git-sync.md § Commit Messages](../specs/git-sync.md#commit-messages)
-- [ ] Implement push failure handling (warn to stderr, continue)
-- [ ] Implement `HOURS_NO_GIT` check
-- [ ] Implement `--no-git` flag (propagated from clap)
+- [x] Implement git operations using `std::process::Command`
+- [x] Implement commit message formatting per [git-sync.md § Commit Messages](../specs/git-sync.md#commit-messages)
+- [x] Implement push failure handling (warn to stderr, continue)
+- [x] Implement `HOURS_NO_GIT` check
+- [x] Implement `--no-git` flag (propagated from clap)
+
+**Lessons learned:**
+
+- `git commit` reports "nothing to commit" on **stdout**, not stderr. The `git_commit` function must check both streams to correctly detect and silently skip this case.
+- Tests that call `git_init` (which creates a repo) need a separate `set_git_test_config` helper to set `user.email` and `user.name` locally in the test repo, since the CI/sandbox environment may not have global git config.
+- The `git_init_and_commit` convenience function is useful for `hours init`, but in tests it's cleaner to call `git_init` + `set_git_test_config` + `git_commit` separately to ensure the test git config is set between repo creation and the first commit.
 
 ---
 

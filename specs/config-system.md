@@ -47,13 +47,6 @@ min_weekly_average = 15.0
 | `remote` | `String` | `"origin"` | Git remote name for push operations |
 | `auto_push` | `bool` | `true` | Whether to push after every commit |
 
-### Section: `[git]`
-
-| Key | Type | Default | Description |
-|-----|------|---------|-------------|
-| `remote` | `String` | `"origin"` | Git remote name |
-| `auto_push` | `bool` | `true` | Push after every commit |
-
 ### Section: `[licensure]`
 
 | Key | Type | Default | Description |

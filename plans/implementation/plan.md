@@ -43,11 +43,16 @@ Phased build plan for the `hours` CLI tool. Each phase lists the spec references
 
 **Actions:**
 
-- [ ] Run `cargo init --name hours` in the project directory
-- [ ] Add all dependencies to `Cargo.toml`
-- [ ] Create the directory and module structure per [architecture.md § Project Structure](../specs/architecture.md#project-structure)
-- [ ] Define the clap app with all six subcommands (stubbed with `todo!()`)
-- [ ] Verify the project compiles with `cargo check`
+- [x] Run `cargo init --name hours` in the project directory
+- [x] Add all dependencies to `Cargo.toml`
+- [x] Create the directory and module structure per [architecture.md § Project Structure](../specs/architecture.md#project-structure)
+- [x] Define the clap app with all six subcommands (stubbed with `todo!()`)
+- [x] Verify the project compiles with `cargo check`
+
+**Lessons learned:**
+
+- `genpdf` latest stable is `0.2`, not `0.3`. Use `genpdf = "0.2"` in `Cargo.toml`.
+- Added `anyhow` as a dependency for ergonomic error handling across command handlers.
 
 ---
 

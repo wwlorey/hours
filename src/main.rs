@@ -1,0 +1,17 @@
+mod cli;
+mod config;
+mod data;
+mod git;
+mod pdf;
+mod ui;
+
+use clap::Parser;
+use cli::Cli;
+
+fn main() {
+    let cli = Cli::parse();
+    if let Err(e) = cli::run(cli) {
+        eprintln!("Error: {e}");
+        std::process::exit(1);
+    }
+}

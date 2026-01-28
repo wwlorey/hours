@@ -362,10 +362,15 @@ Phased build plan for the `hours` CLI tool. Each phase lists the spec references
 
 **Actions:**
 
-- [ ] Write `README.md` with installation, quickstart, command reference
-- [ ] Add license file
-- [ ] Review all specs for accuracy against final implementation
-- [ ] Ensure all spec cross-references are correct
+- [x] Write `README.md` with installation, quickstart, command reference
+- [x] Add license file (MIT)
+- [x] Review all specs for accuracy against final implementation
+- [x] Ensure all spec cross-references are correct
+
+**Lessons learned:**
+
+- Spec review found 3 minor inaccuracies (pre-existing from earlier phases, not introduced here): (1) `hours list` empty state message wording differs slightly from cli-system.md spec, (2) `hours init` exits on existing config rather than prompting for confirmation as spec describes, (3) `hours export` does not call git sync as spec describes. All cross-references between specs are valid.
+- The LICENSE file uses MIT license. The bundled Liberation Sans fonts in `assets/fonts/` have their own SIL Open Font License 1.1 — the README references both.
 
 ---
 

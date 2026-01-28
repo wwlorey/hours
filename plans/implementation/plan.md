@@ -190,13 +190,20 @@ Phased build plan for the `hours` CLI tool. Each phase lists the spec references
 
 **Actions:**
 
-- [ ] Implement raw terminal mode with `crossterm::terminal::enable_raw_mode`
-- [ ] Implement event loop reading `crossterm::event::read()` for key events
-- [ ] Map `j`/`↓` to down, `k`/`↑` to up, `Enter` to confirm, `Esc`/`q` to cancel, `g` to top, `G` to bottom per [cli-system.md § Key Bindings](../specs/cli-system.md#key-bindings)
-- [ ] Implement list rendering with `>` marker on selected item
-- [ ] Implement week display format: `Mon DD – Mon DD, YYYY` with `(current)` marker and total hours
-- [ ] Implement number input with validation (>= 0, valid decimal)
-- [ ] Ensure raw mode is always cleaned up (use a guard/drop pattern)
+- [x] Implement raw terminal mode with `crossterm::terminal::enable_raw_mode`
+- [x] Implement event loop reading `crossterm::event::read()` for key events
+- [x] Map `j`/`↓` to down, `k`/`↑` to up, `Enter` to confirm, `Esc`/`q` to cancel, `g` to top, `G` to bottom per [cli-system.md § Key Bindings](../specs/cli-system.md#key-bindings)
+- [x] Implement list rendering with `>` marker on selected item
+- [x] Implement week display format: `Mon DD – Mon DD, YYYY` with `(current)` marker and total hours
+- [x] Implement number input with validation (>= 0, valid decimal)
+- [x] Ensure raw mode is always cleaned up (use a guard/drop pattern)
+
+**Lessons learned:**
+
+- Interactive prompt functions that enter raw mode cannot be easily unit-tested with simulated input, since `crossterm::event::read()` reads directly from the terminal. Tests focus on the pure formatting/logic functions (`format_week_label`, category items) and the `RawModeGuard` lifecycle. Integration tests for interactive flows should use `--non-interactive` mode instead.
+- Added `input_text`, `input_date`, and `confirm` helper prompts beyond the spec's minimum — these are needed by Phase 6's `init` command interactive flow (prompt for data dir, remote URL, start date, confirm targets).
+- All prompt functions return `Option` to distinguish between user-confirmed input and cancellation (Esc/Ctrl+C). This allows command handlers to bail cleanly on cancel.
+- `Ctrl+C` is handled explicitly in raw mode (matching `KeyModifiers::CONTROL` + `Char('c')`) since the default SIGINT handler is suppressed when raw mode is active.
 
 ---
 

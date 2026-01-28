@@ -82,13 +82,19 @@ Phased build plan for the `hours` CLI tool. Each phase lists the spec references
 
 **Actions:**
 
-- [ ] Implement `HoursData` and `WeekEntry` with serde derives
-- [ ] Implement `Category` enum with `FromStr` for CLI parsing
-- [ ] Implement week calculation with `chrono` per the algorithm in [data-model.md § Current Week Algorithm](../specs/data-model.md#current-week-algorithm)
-- [ ] Implement `all_weeks` generator
-- [ ] Implement atomic JSON load/save
-- [ ] Write unit tests for week calculation covering all examples in [data-model.md § Examples](../specs/data-model.md#examples)
-- [ ] Write unit tests for atomic save (write, read back, verify)
+- [x] Implement `HoursData` and `WeekEntry` with serde derives
+- [x] Implement `Category` enum with `FromStr` for CLI parsing
+- [x] Implement week calculation with `chrono` per the algorithm in [data-model.md § Current Week Algorithm](../specs/data-model.md#current-week-algorithm)
+- [x] Implement `all_weeks` generator
+- [x] Implement atomic JSON load/save
+- [x] Write unit tests for week calculation covering all examples in [data-model.md § Examples](../specs/data-model.md#examples)
+- [x] Write unit tests for atomic save (write, read back, verify)
+
+**Lessons learned:**
+
+- `chrono::NaiveDate::weekday()` requires `use chrono::Datelike` trait to be in scope — the method exists as a private inherent method but the public one comes from the `Datelike` trait.
+- `tempfile` crate needed as a dev-dependency for store tests (not already present in Phase 1 scaffolding).
+- Modules not yet consumed by `main.rs` need `#[allow(dead_code)]` on the `mod` declaration in `main.rs` to pass `clippy -D warnings`, since all public items are flagged as unused. These will be removed in Phase 8 when wiring is complete.
 
 ---
 

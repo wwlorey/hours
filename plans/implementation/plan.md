@@ -527,3 +527,19 @@ All tests use isolated temp directories via `HOURS_CONFIG_DIR`, `HOURS_DATA_DIR`
 - **`assert_cmd`** — Runs the compiled binary as a subprocess with env var control. Available as a Rust crate.
 - **`assert_fs`** — Creates and manages temporary directories for test isolation. Available as a Rust crate.
 - **PDF verification** — Integration tests verify the PDF file exists and has non-zero size. Content verification of PDF internals would require a PDF parsing library (e.g., `lopdf`) or a manual spot-check. For the initial implementation, existence and size checks are sufficient.
+
+**Actions:**
+
+- [x] Implement all 19 integration tests in `tests/integration.rs`
+- [x] All tests pass with `cargo test --workspace`
+- [x] All tests use isolated temp directories via `HOURS_CONFIG_DIR`, `HOURS_DATA_DIR`, and `HOURS_NO_GIT=1`
+- [x] All mutating commands use `--non-interactive` and `--no-git` flags
+- [x] Clippy passes with `-D warnings`
+- [x] Code formatted with `cargo fmt --all`
+
+**Lessons learned:**
+
+- `chrono::NaiveDate::weekday()` requires `use chrono::Datelike` in integration tests just as in library code — the trait must be explicitly imported.
+- Integration tests that set `HOURS_CONFIG_DIR` and `HOURS_DATA_DIR` environment variables achieve full isolation. Each test creates its own `TempDir` instances, so parallel test execution works without conflicts.
+- The `add` command always adds to the current week when `--week` is not specified, so tests that need deterministic week dates should always use `--week` with a known Tuesday date.
+- Helper functions (`init_env`, `add_hours`, `add_hours_to_week`, `load_data`) reduce boilerplate significantly across 19 tests. The JSON data file can be read directly for precise assertions rather than relying solely on CLI output.

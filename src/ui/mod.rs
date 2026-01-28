@@ -1,3 +1,6 @@
 pub mod prompts;
 
-pub use prompts::{input_date, input_hours, input_text, select_category, select_week};
+pub use prompts::{
+    flash_confirmation, input_date, input_hours, input_text, select_category,
+    select_category_with_values, select_week, PromptResult,
+};

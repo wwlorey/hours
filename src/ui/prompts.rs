@@ -1,4 +1,6 @@
 use std::io::{self, Write};
+use std::thread;
+use std::time::Duration;
 
 use anyhow::{bail, Result};
 use chrono::NaiveDate;
@@ -10,8 +12,14 @@ use crossterm::{
     ExecutableCommand, QueueableCommand,
 };
 
-use crate::data::model::{Category, HoursData};
+use crate::data::model::{Category, HoursData, WeekEntry};
 use crate::data::week;
+
+pub enum PromptResult<T> {
+    Value(T),
+    Back,
+    Exit,
+}
 
 struct RawModeGuard;
 
@@ -34,7 +42,9 @@ enum SelectAction {
     Top,
     Bottom,
     Confirm,
-    Cancel,
+    Back,
+    Exit,
+    Help,
 }
 
 fn read_select_key() -> Result<SelectAction> {
@@ -44,7 +54,7 @@ fn read_select_key() -> Result<SelectAction> {
         }) = event::read()?
         {
             if modifiers.contains(KeyModifiers::CONTROL) && code == KeyCode::Char('c') {
-                return Ok(SelectAction::Cancel);
+                return Ok(SelectAction::Exit);
             }
             match code {
                 KeyCode::Char('j') | KeyCode::Down => return Ok(SelectAction::Down),
@@ -52,7 +62,8 @@ fn read_select_key() -> Result<SelectAction> {
                 KeyCode::Char('g') => return Ok(SelectAction::Top),
                 KeyCode::Char('G') => return Ok(SelectAction::Bottom),
                 KeyCode::Enter => return Ok(SelectAction::Confirm),
-                KeyCode::Esc | KeyCode::Char('q') => return Ok(SelectAction::Cancel),
+                KeyCode::Esc | KeyCode::Char('q') => return Ok(SelectAction::Back),
+                KeyCode::Char('?') => return Ok(SelectAction::Help),
                 _ => {}
             }
         }
@@ -85,7 +96,61 @@ fn render_list(
     Ok(())
 }
 
-fn select_from_list(header: &str, items: &[String], initial: usize) -> Result<Option<usize>> {
+fn render_help_overlay(stdout: &mut io::Stdout) -> Result<()> {
+    stdout.queue(cursor::MoveTo(0, 0))?;
+    stdout.queue(terminal::Clear(ClearType::All))?;
+
+    stdout.queue(style::PrintStyledContent("Key Bindings".bold()))?;
+    stdout.queue(cursor::MoveToNextLine(1))?;
+    stdout.queue(style::Print("────────────────────────────────"))?;
+    stdout.queue(cursor::MoveToNextLine(1))?;
+
+    let bindings = [
+        ("j / ↓", "Move down"),
+        ("k / ↑", "Move up"),
+        ("Enter", "Confirm selection"),
+        ("Esc / q", "Go back"),
+        ("g", "Jump to first item"),
+        ("G", "Jump to last item"),
+        ("?", "Show this help"),
+        ("Ctrl+C", "Exit immediately"),
+    ];
+
+    for (key, desc) in &bindings {
+        stdout.queue(style::Print(format!("{:<14}{}", key, desc)))?;
+        stdout.queue(cursor::MoveToNextLine(1))?;
+    }
+
+    stdout.queue(cursor::MoveToNextLine(1))?;
+    stdout.queue(style::PrintStyledContent(
+        "Press any key to dismiss...".dark_grey(),
+    ))?;
+    stdout.flush()?;
+
+    loop {
+        if let Event::Key(_) = event::read()? {
+            break;
+        }
+    }
+
+    Ok(())
+}
+
+pub fn flash_confirmation(message: &str) -> Result<()> {
+    let _guard = RawModeGuard::enable()?;
+    let mut stdout = io::stdout();
+
+    stdout.queue(cursor::MoveTo(0, 0))?;
+    stdout.queue(terminal::Clear(ClearType::All))?;
+    stdout.queue(style::PrintStyledContent(message.green()))?;
+    stdout.flush()?;
+
+    thread::sleep(Duration::from_secs(1));
+
+    Ok(())
+}
+
+fn select_from_list(header: &str, items: &[String], initial: usize) -> Result<PromptResult<usize>> {
     if items.is_empty() {
         bail!("No items to select from");
     }
@@ -119,8 +184,13 @@ fn select_from_list(header: &str, items: &[String], initial: usize) -> Result<Op
                 selected = items.len() - 1;
                 render_list(&mut stdout, header, items, selected)?;
             }
-            SelectAction::Confirm => break Some(selected),
-            SelectAction::Cancel => break None,
+            SelectAction::Confirm => break PromptResult::Value(selected),
+            SelectAction::Back => break PromptResult::Back,
+            SelectAction::Exit => break PromptResult::Exit,
+            SelectAction::Help => {
+                render_help_overlay(&mut stdout)?;
+                render_list(&mut stdout, header, items, selected)?;
+            }
         }
     };
 
@@ -154,7 +224,7 @@ pub fn select_week(
     weeks: &[(NaiveDate, NaiveDate)],
     data: &HoursData,
     current_week_start: NaiveDate,
-) -> Result<Option<NaiveDate>> {
+) -> Result<PromptResult<NaiveDate>> {
     let items: Vec<String> = weeks
         .iter()
         .rev()
@@ -168,27 +238,52 @@ pub fn select_week(
         .unwrap_or(0);
 
     match select_from_list("Select week:", &items, current_index)? {
-        Some(idx) => {
+        PromptResult::Value(idx) => {
             let reversed_idx = weeks.len() - 1 - idx;
-            Ok(Some(weeks[reversed_idx].0))
+            Ok(PromptResult::Value(weeks[reversed_idx].0))
         }
-        None => Ok(None),
+        PromptResult::Back => Ok(PromptResult::Back),
+        PromptResult::Exit => Ok(PromptResult::Exit),
     }
 }
 
-pub fn select_category() -> Result<Option<Category>> {
+pub fn select_category() -> Result<PromptResult<Category>> {
     let items: Vec<String> = Category::ALL
         .iter()
         .map(|c| c.long_name().to_string())
         .collect();
 
     match select_from_list("Select category:", &items, 0)? {
-        Some(idx) => Ok(Some(Category::ALL[idx])),
-        None => Ok(None),
+        PromptResult::Value(idx) => Ok(PromptResult::Value(Category::ALL[idx])),
+        PromptResult::Back => Ok(PromptResult::Back),
+        PromptResult::Exit => Ok(PromptResult::Exit),
     }
 }
 
-pub fn input_hours(prompt: &str, current_value: Option<f64>) -> Result<Option<f64>> {
+pub fn select_category_with_values(entry: &WeekEntry) -> Result<PromptResult<Category>> {
+    let max_name_len = Category::ALL
+        .iter()
+        .map(|c| c.long_name().len())
+        .max()
+        .unwrap_or(0);
+
+    let items: Vec<String> = Category::ALL
+        .iter()
+        .map(|c| {
+            let name = c.long_name();
+            let val = entry.get(*c);
+            format!("{:<width$}    {val:.1} hrs", name, width = max_name_len)
+        })
+        .collect();
+
+    match select_from_list("Select category:", &items, 0)? {
+        PromptResult::Value(idx) => Ok(PromptResult::Value(Category::ALL[idx])),
+        PromptResult::Back => Ok(PromptResult::Back),
+        PromptResult::Exit => Ok(PromptResult::Exit),
+    }
+}
+
+pub fn input_hours(prompt: &str, current_value: Option<f64>) -> Result<PromptResult<f64>> {
     let _guard = RawModeGuard::enable()?;
     let mut stdout = io::stdout();
 
@@ -197,10 +292,16 @@ pub fn input_hours(prompt: &str, current_value: Option<f64>) -> Result<Option<f6
         None => format!("{prompt}: "),
     };
 
-    stdout.queue(cursor::MoveTo(0, 0))?;
-    stdout.queue(terminal::Clear(ClearType::All))?;
-    stdout.queue(style::Print(&display_prompt))?;
-    stdout.flush()?;
+    let render_prompt = |stdout: &mut io::Stdout, input: &str| -> Result<()> {
+        stdout.queue(cursor::MoveTo(0, 0))?;
+        stdout.queue(terminal::Clear(ClearType::All))?;
+        stdout.queue(style::Print(&display_prompt))?;
+        stdout.queue(style::Print(input))?;
+        stdout.flush()?;
+        Ok(())
+    };
+
+    render_prompt(&mut stdout, "")?;
 
     let mut input = String::new();
 
@@ -211,24 +312,34 @@ pub fn input_hours(prompt: &str, current_value: Option<f64>) -> Result<Option<f6
         {
             if modifiers.contains(KeyModifiers::CONTROL) && code == KeyCode::Char('c') {
                 stdout.execute(cursor::MoveToNextLine(1))?;
-                return Ok(None);
+                return Ok(PromptResult::Exit);
             }
             match code {
                 KeyCode::Enter => {
                     stdout.execute(cursor::MoveToNextLine(1))?;
                     if input.is_empty() {
-                        return Ok(current_value);
+                        return match current_value {
+                            Some(val) => Ok(PromptResult::Value(val)),
+                            None => {
+                                stdout.queue(style::PrintStyledContent(
+                                    "Hours value is required.".red(),
+                                ))?;
+                                stdout.queue(cursor::MoveToNextLine(1))?;
+                                input.clear();
+                                render_prompt(&mut stdout, "")?;
+                                continue;
+                            }
+                        };
                     }
                     match input.parse::<f64>() {
-                        Ok(val) if val >= 0.0 => return Ok(Some(val)),
+                        Ok(val) if val >= 0.0 => return Ok(PromptResult::Value(val)),
                         Ok(_) => {
                             stdout.queue(style::PrintStyledContent(
                                 "Hours must be >= 0. Try again.".red(),
                             ))?;
                             stdout.queue(cursor::MoveToNextLine(1))?;
                             input.clear();
-                            stdout.queue(style::Print(&display_prompt))?;
-                            stdout.flush()?;
+                            render_prompt(&mut stdout, "")?;
                         }
                         Err(_) => {
                             stdout.queue(style::PrintStyledContent(
@@ -236,10 +347,13 @@ pub fn input_hours(prompt: &str, current_value: Option<f64>) -> Result<Option<f6
                             ))?;
                             stdout.queue(cursor::MoveToNextLine(1))?;
                             input.clear();
-                            stdout.queue(style::Print(&display_prompt))?;
-                            stdout.flush()?;
+                            render_prompt(&mut stdout, "")?;
                         }
                     }
+                }
+                KeyCode::Char('?') if input.is_empty() => {
+                    render_help_overlay(&mut stdout)?;
+                    render_prompt(&mut stdout, &input)?;
                 }
                 KeyCode::Char(c) if c.is_ascii_digit() || c == '.' => {
                     input.push(c);
@@ -257,7 +371,7 @@ pub fn input_hours(prompt: &str, current_value: Option<f64>) -> Result<Option<f6
                 }
                 KeyCode::Esc => {
                     stdout.execute(cursor::MoveToNextLine(1))?;
-                    return Ok(None);
+                    return Ok(PromptResult::Back);
                 }
                 _ => {}
             }
@@ -497,9 +611,6 @@ mod tests {
         {
             let _guard = RawModeGuard::enable();
         }
-        // After the guard is dropped, raw mode should be disabled.
-        // We can't easily assert this in a unit test, but we verify
-        // the guard can be created and dropped without panicking.
     }
 
     #[test]
@@ -513,5 +624,31 @@ mod tests {
         assert_eq!(items[1], "Group Supervision");
         assert_eq!(items[2], "Direct (client contact)");
         assert_eq!(items[3], "Indirect");
+    }
+
+    #[test]
+    fn test_category_with_values_formatting() {
+        let entry = WeekEntry {
+            start: date(2025, 1, 28),
+            end: date(2025, 2, 3),
+            individual_supervision: 1.0,
+            group_supervision: 2.0,
+            direct: 14.5,
+            indirect: 6.0,
+        };
+
+        let max_name_len = Category::ALL
+            .iter()
+            .map(|c| c.long_name().len())
+            .max()
+            .unwrap_or(0);
+
+        for cat in Category::ALL {
+            let name = cat.long_name();
+            let val = entry.get(cat);
+            let formatted = format!("{:<width$}    {val:.1} hrs", name, width = max_name_len);
+            assert!(formatted.contains("hrs"));
+            assert!(formatted.contains(name));
+        }
     }
 }

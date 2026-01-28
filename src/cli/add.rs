@@ -7,8 +7,19 @@ use crate::data::model::Category;
 use crate::data::{store, week};
 use crate::git;
 use crate::ui;
+use crate::ui::PromptResult;
 
 #[derive(Args)]
+#[command(after_help = "\
+Navigation (interactive mode):
+  j/↓         Move down
+  k/↑         Move up
+  Enter       Confirm selection
+  Esc/q       Go back one level
+  g           Jump to first item
+  G           Jump to last item
+  ?           Show help overlay
+  Ctrl+C      Exit immediately")]
 pub struct AddArgs {
     #[arg(long, help = "Tuesday start date of the week (YYYY-MM-DD)")]
     pub week: Option<String>,
@@ -26,11 +37,12 @@ pub struct AddArgs {
 pub fn run(args: AddArgs, no_git: bool) -> Result<()> {
     let config = Config::load()?;
     let data_file = config.data_file();
-    let mut data = store::load(&data_file)?;
 
     let today = Local::now().date_naive();
 
-    let (week_start, category, hours) = if args.non_interactive {
+    if args.non_interactive {
+        let mut data = store::load(&data_file)?;
+
         let week_start = match &args.week {
             Some(w) => {
                 let date = NaiveDate::parse_from_str(w, "%Y-%m-%d")
@@ -55,42 +67,82 @@ pub fn run(args: AddArgs, no_git: bool) -> Result<()> {
             bail!("Hours must be >= 0, got {hours}");
         }
 
-        (week_start, category, hours)
+        let (_, week_end) = week::week_containing(week_start);
+        let entry = match data.weeks.iter_mut().find(|w| w.start == week_start) {
+            Some(entry) => entry,
+            None => {
+                data.weeks
+                    .push(crate::data::model::WeekEntry::new(week_start, week_end));
+                data.weeks.last_mut().unwrap()
+            }
+        };
+        entry.add(category, hours);
+
+        store::save(&data_file, &data)?;
+
+        println!("Added {hours:.1} {category} hours for week of {week_start}");
+
+        let message = format!(
+            "Add {} {} hours for week of {}",
+            hours, category, week_start
+        );
+        git::git_sync(&config.data_dir(), &config.git, &message, no_git)?;
     } else {
         let weeks = week::all_weeks(config.licensure.start_date, today);
         let (current_start, _) = week::current_week(today);
 
-        let week_start = ui::select_week(&weeks, &data, current_start)?
-            .ok_or_else(|| anyhow::anyhow!("Cancelled"))?;
+        'week_loop: loop {
+            let data = store::load(&data_file)?;
 
-        let category = ui::select_category()?.ok_or_else(|| anyhow::anyhow!("Cancelled"))?;
+            let week_start = match ui::select_week(&weeks, &data, current_start)? {
+                PromptResult::Value(ws) => ws,
+                PromptResult::Back | PromptResult::Exit => return Ok(()),
+            };
 
-        let hours = ui::input_hours(&format!("Hours to add ({category})"), None)?
-            .ok_or_else(|| anyhow::anyhow!("Cancelled"))?;
+            'category_loop: loop {
+                let category = match ui::select_category()? {
+                    PromptResult::Value(c) => c,
+                    PromptResult::Back => continue 'week_loop,
+                    PromptResult::Exit => return Ok(()),
+                };
 
-        (week_start, category, hours)
-    };
+                let hours = match ui::input_hours(&format!("Hours to add ({category})"), None)? {
+                    PromptResult::Value(h) => h,
+                    PromptResult::Back => continue 'category_loop,
+                    PromptResult::Exit => return Ok(()),
+                };
 
-    let (_, week_end) = week::week_containing(week_start);
-    let entry = match data.weeks.iter_mut().find(|w| w.start == week_start) {
-        Some(entry) => entry,
-        None => {
-            data.weeks
-                .push(crate::data::model::WeekEntry::new(week_start, week_end));
-            data.weeks.last_mut().unwrap()
+                let mut data = store::load(&data_file)?;
+                let (_, week_end) = week::week_containing(week_start);
+                let entry = match data.weeks.iter_mut().find(|w| w.start == week_start) {
+                    Some(entry) => entry,
+                    None => {
+                        data.weeks
+                            .push(crate::data::model::WeekEntry::new(week_start, week_end));
+                        data.weeks.last_mut().unwrap()
+                    }
+                };
+                entry.add(category, hours);
+
+                let new_total = entry.total();
+
+                store::save(&data_file, &data)?;
+
+                let message = format!(
+                    "Add {} {} hours for week of {}",
+                    hours, category, week_start
+                );
+                git::git_sync(&config.data_dir(), &config.git, &message, no_git)?;
+
+                ui::flash_confirmation(&format!(
+                    "Added {hours:.1} {} hours -> week total: {new_total:.1}",
+                    category.long_name()
+                ))?;
+
+                continue 'category_loop;
+            }
         }
-    };
-    entry.add(category, hours);
-
-    store::save(&data_file, &data)?;
-
-    println!("Added {hours:.1} {category} hours for week of {week_start}",);
-
-    let message = format!(
-        "Add {} {} hours for week of {}",
-        hours, category, week_start
-    );
-    git::git_sync(&config.data_dir(), &config.git, &message, no_git)?;
+    }
 
     Ok(())
 }

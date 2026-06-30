@@ -1,5 +1,5 @@
 ---
-status: open
+status: in_progress
 priority: p3
 type: chore
 deps: []

@@ -168,6 +168,17 @@ cargo clippy --workspace -- -D warnings  # Lint
 cargo fmt --all                          # Format
 ```
 
+A [`justfile`](justfile) wraps these commands as convenience aliases (run `just`
+to list them):
+
+```bash
+just install  # cargo install --path . --force
+just build    # cargo build
+just test     # cargo test --workspace
+just lint     # cargo clippy --workspace -- -D warnings
+just fmt      # cargo fmt --all
+```
+
 ## Specifications
 
 Detailed design documentation is available in [specs/README.md](specs/README.md).

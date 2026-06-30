@@ -21,6 +21,7 @@ The codebase is a thin `clap` dispatch layer (`src/cli/`) over a data core (`src
 ```
 hours/
 ├── Cargo.toml
+├── justfile                 # Dev task recipes (build, test, lint, fmt, install)
 ├── src/
 │   ├── main.rs              # Entry point, clap CLI dispatch
 │   ├── cli/

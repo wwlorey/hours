@@ -1,3 +1,8 @@
+---
+status: implemented
+refs: [config-system]
+---
+
 # Git Sync
 
 > **Spec:** `specs/git-sync.md`
@@ -6,6 +11,14 @@
 ## Overview
 
 Every data mutation (`add`, `edit`) automatically commits and pushes the data file to a git remote. This provides version history, backup, and sync across machines. Git operations shell out to the `git` CLI.
+
+## Architecture
+
+Git integration lives in `src/git.rs` and shells out to the `git` CLI, always using `git -C <data_dir>` so operations target the data directory regardless of the working directory. Commit and (optionally) push run synchronously after each successful write to `hours.json` (see [Commit Behavior](#commit-behavior)).
+
+## Dependencies
+
+Requires the `git` CLI on `PATH` (see [Prerequisites](#prerequisites)); no git library is linked. The data directory and remote are established during `hours init`, and push behavior is governed by the `[git]` config section (see [config-system.md § `[git]`](./config-system.md#section-git)).
 
 ## Prerequisites
 
@@ -50,7 +63,7 @@ If `git push` fails (network unavailable, auth issue, etc.):
 
 The tool never fails or exits non-zero due to a push failure. Data integrity is always preserved locally.
 
-## Error Handling
+## Error handling
 
 | Scenario | Behavior |
 |----------|----------|
@@ -89,3 +102,7 @@ When git is disabled:
 - No `git add`, `git commit`, or `git push` calls are made.
 - Data is still saved to `hours.json` normally.
 - No warnings about git status are printed.
+
+## Testing
+
+Setting `HOURS_NO_GIT=1` (or passing `--no-git`) disables all git operations so integration tests run with no git side effects (see [architecture.md § Testability](./architecture.md#testability)).

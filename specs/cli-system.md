@@ -1,3 +1,8 @@
+---
+status: implemented
+refs: [config-system, git-sync, pdf-export, summary-system]
+---
+
 # CLI System
 
 > **Spec:** `specs/cli-system.md`
@@ -6,6 +11,10 @@
 ## Overview
 
 The CLI provides six commands for managing licensure hours. Interactive prompts use vim-style key bindings for navigation. All mutating commands support a `--non-interactive` flag for scripting and testing.
+
+## Architecture
+
+The CLI is defined with `clap` in `src/cli/mod.rs`, which dispatches each subcommand to its handler module (`init.rs`, `add.rs`, `edit.rs`, `list.rs`, `summary.rs`, `export.rs`). Interactive prompts are implemented on `crossterm` in `src/ui/prompts.rs` using the nested-screen, back-navigation model described under [Interactive Prompts](#interactive-prompts).
 
 ## Commands
 
@@ -311,3 +320,15 @@ For `hours edit`:
 ```
 Set Direct (client contact) to 14.5 hrs for week of 2025-01-28
 ```
+
+## Dependencies
+
+Built on `clap` (argument parsing) and `crossterm` (raw-terminal interactive prompts). Command handlers delegate to the configuration loader (see [config-system.md](./config-system.md)), the git sync layer (see [git-sync.md](./git-sync.md)), the summary calculations (see [summary-system.md](./summary-system.md)), and the PDF generator (see [pdf-export.md](./pdf-export.md)).
+
+## Error handling
+
+Validation failures — negative hours, non-decimal input, an invalid category, or a non-Tuesday `--week` — are reported with a usage message and a non-zero exit. In non-interactive mode, missing required flags are an error. Git push failures surface only as warnings and never fail the command (see [git-sync.md](./git-sync.md)).
+
+## Testing
+
+Every mutating command supports `--non-interactive` together with the `HOURS_*` environment overrides, enabling full end-to-end testing with no terminal interaction or git side effects (see [architecture.md § Testability](./architecture.md#testability)).

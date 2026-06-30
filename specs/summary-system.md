@@ -1,3 +1,8 @@
+---
+status: implemented
+refs: [config-system]
+---
+
 # Summary System
 
 > **Spec:** `specs/summary-system.md`
@@ -6,6 +11,10 @@
 ## Overview
 
 The `hours summary` command displays progress toward all licensure targets as raw numbers with percentages. The same calculations are reused by the PDF export (see [pdf-export.md](./pdf-export.md)).
+
+## Architecture
+
+The `hours summary` command lives in `src/cli/summary.rs`. It computes the four licensure metrics in [Calculations](#calculations) from the logged weeks and the configured targets, then renders them per [Display Format](#display-format). The same calculations are reused by the PDF export (see [pdf-export.md](./pdf-export.md)).
 
 ## Licensure Targets
 
@@ -131,3 +140,15 @@ Weeks logged: 0
 ```
 
 The "Date range" line is omitted when no weeks exist.
+
+## Dependencies
+
+Reads licensure targets from configuration (see [config-system.md § `[licensure]`](./config-system.md#section-licensure)) and operates on the stored week data; uses `chrono` for month and week arithmetic and `comfy-table` for terminal formatting. The same metrics feed the PDF report (see [pdf-export.md](./pdf-export.md)).
+
+## Error handling
+
+With no logged weeks every metric reports `0 / target (0.0%)` and the date-range line is omitted (see [Empty State](#empty-state)). Division by zero is guarded for zero targets and zero elapsed weeks.
+
+## Testing
+
+The `--json` output produces a machine-parseable object that the integration tests assert against to verify calculation correctness (see [architecture.md § Testability](./architecture.md#testability)).

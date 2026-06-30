@@ -1,3 +1,8 @@
+---
+status: implemented
+refs: [config-system, git-sync]
+---
+
 # Data Model
 
 > **Spec:** `specs/data-model.md`
@@ -6,6 +11,10 @@
 ## Overview
 
 All hours data is stored in a single JSON file (`hours.json`) in the configured data directory. The file contains an array of week entries, sorted by start date ascending.
+
+## Architecture
+
+Data types live in `src/data/model.rs` (`HoursData`, `WeekEntry`, `Category`), JSON persistence in `src/data/store.rs`, and Tue–Mon week arithmetic in `src/data/week.rs`. Everything is stored in one `hours.json` file shaped per the [JSON Schema](#json-schema).
 
 ## JSON Schema
 
@@ -153,3 +162,15 @@ A freshly-initialized `hours.json` contains:
 ```
 
 All commands must handle this empty state gracefully (see [cli-system.md § Empty State](./cli-system.md#hours-list) notes on individual commands).
+
+## Dependencies
+
+Uses `serde`/`serde_json` for (de)serialization and `chrono` for week date arithmetic. The data directory is resolved from configuration (see [config-system.md](./config-system.md)), and each write is committed by the git layer (see [git-sync.md](./git-sync.md)).
+
+## Error handling
+
+All [Invariants](#invariants) are validated before every write; any violation aborts the save so `hours.json` is never left inconsistent. [Atomic Writes](#atomic-writes) (temp file + fsync + rename) prevent partial writes from interrupted operations.
+
+## Testing
+
+Week calculation and invariant enforcement are covered by unit tests in `src/data/`, and round-trip persistence is exercised end-to-end by the integration tests in `tests/integration.rs` using temporary directories and the `HOURS_*` environment overrides.

@@ -1,3 +1,8 @@
+---
+status: implemented
+refs: []
+---
+
 # Configuration System
 
 > **Spec:** `specs/config-system.md`
@@ -6,6 +11,10 @@
 ## Overview
 
 Configuration is stored in a TOML file at `~/.config/hours/config.toml`. Environment variables can override settings for testing and CI.
+
+## Architecture
+
+Configuration handling lives in `src/config.rs`. The TOML file is deserialized into the `Config` struct (see [Rust Types](#rust-types)) following the precedence and steps in [Loading Behavior](#loading-behavior); environment overrides are then applied and the `data.directory` tilde is expanded.
 
 ## Config File Location
 
@@ -118,3 +127,15 @@ Error: Configuration not found. Run `hours init` to set up.
 ## Initialization
 
 The `hours init` command creates the config file (see [cli-system.md § `hours init`](./cli-system.md#hours-init)). If the file already exists, `init` warns and asks for confirmation before overwriting.
+
+## Dependencies
+
+Uses `toml` and `serde` for parsing and deserialization, `dirs` for XDG config-directory resolution, and `shellexpand` for tilde expansion of `data.directory`. The loaded `Config` is consumed by every command (see [cli-system.md](./cli-system.md)) and drives the licensure calculations (see [summary-system.md](./summary-system.md)).
+
+## Error handling
+
+A missing config file causes all commands except `hours init` to print `Error: Configuration not found. Run hours init to set up.` and exit. To avoid clobbering existing setup, `hours init` warns and asks for confirmation before overwriting (see [Initialization](#initialization)).
+
+## Testing
+
+The `HOURS_CONFIG_DIR`, `HOURS_DATA_DIR`, and `HOURS_NO_GIT` overrides isolate tests from the real environment (see [architecture.md § Testability](./architecture.md#testability)); unit tests in `src/config.rs` cover loading and override precedence.

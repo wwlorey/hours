@@ -1,3 +1,8 @@
+---
+status: implemented
+refs: [config-system, summary-system]
+---
+
 # PDF Export
 
 > **Spec:** `specs/pdf-export.md`
@@ -6,6 +11,10 @@
 ## Overview
 
 The `hours export` command generates a clean PDF report containing all tracked weeks and a progress summary. The report is designed to serve as supporting documentation for a licensing board.
+
+## Architecture
+
+PDF generation lives in `src/pdf.rs`. The `hours export` command assembles the document described in [Report Layout](#report-layout) — header, per-week hours table, and progress summary — writes it to the path in [File Output](#file-output), and reuses the licensure calculations from [summary-system.md](./summary-system.md).
 
 ## Report Layout
 
@@ -94,3 +103,15 @@ If no hours are logged, the PDF contains only the header and a note:
 ```
 No hours have been logged yet.
 ```
+
+## Dependencies
+
+Uses the `genpdf` crate (over `printpdf`) for document layout, tables, and styled text (see [PDF Generation](#pdf-generation)). Reuses the licensure calculations from [summary-system.md](./summary-system.md) and reads targets from configuration (see [config-system.md](./config-system.md)).
+
+## Error handling
+
+The `exports/` directory is created automatically if it is missing. When no hours are logged, the report degrades gracefully to a header plus a "No hours have been logged yet." note (see [Empty State](#empty-state)).
+
+## Testing
+
+Export is driven non-interactively via `hours export` against a temporary data directory; generated PDFs are gitignored artifacts and are not committed (see [git-sync.md](./git-sync.md)).

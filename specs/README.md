@@ -1,6 +1,31 @@
+---
+status: implemented
+refs: [architecture, cli-system, config-system, data-model, git-sync, pdf-export, summary-system]
+---
+
 # Hours Specifications
 
 Design documentation for Hours, a Rust CLI tool for tracking counseling licensure hours.
+
+## Overview
+
+This directory is the spec library for Hours: design documentation for the shipped CLI, with one markdown file per design unit. The index tables below map each spec to the code that implements it.
+
+## Architecture
+
+The library is flat — one file per design unit, with the filename stem serving as the spec ID and no subdirectories. The entry point is [architecture.md](./architecture.md), which links down to the per-subsystem specs covering the [CLI](./cli-system.md), [data model](./data-model.md), [configuration](./config-system.md), [git sync](./git-sync.md), [PDF export](./pdf-export.md), and [summary system](./summary-system.md).
+
+## Dependencies
+
+Each spec declares its neighbor specs in its `refs:` frontmatter, forming a cross-reference graph across the seven specs indexed below. The specs collectively describe the Rust crate under [src/](../src/).
+
+## Error handling
+
+Structural problems — missing or malformed frontmatter, an unknown `status:` value, a missing required section, an unresolved `refs:` entry, or a cycle in the ref graph — are reported by `specs/validate`.
+
+## Testing
+
+Run `specs/validate` from anywhere in the repo to validate the whole library; it parses frontmatter, checks the required H2 sections, resolves refs, and detects cycles, exiting non-zero on any structural error.
 
 ## Core Architecture
 

@@ -1,3 +1,8 @@
+---
+status: implemented
+refs: [cli-system, config-system, data-model, git-sync]
+---
+
 # Architecture
 
 > **Spec:** `specs/architecture.md`
@@ -6,6 +11,10 @@
 ## Overview
 
 Hours is a single-binary Rust CLI tool for tracking counseling licensure hours. It stores data in a local JSON file, reads configuration from a TOML file, and uses git for backup and version history.
+
+## Architecture
+
+The codebase is a thin `clap` dispatch layer (`src/cli/`) over a data core (`src/data/`), with `config.rs`, `git.rs`, and `pdf.rs` as supporting services and `src/ui/` for interactive prompts. The concrete module layout and runtime flow are detailed in [Project Structure](#project-structure) and [Data Flow](#data-flow) below.
 
 ## Project Structure
 
@@ -84,3 +93,11 @@ All commands support non-interactive operation for automated testing:
 - **`--json`** — Machine-parseable JSON output for `list` and `summary` commands.
 
 These flags allow full end-to-end testing from the command line using temporary directories, with no git side effects and no terminal interaction required.
+
+## Error handling
+
+Errors are handled per subsystem rather than centrally: a missing configuration aborts every command except `init` (see [config-system.md](./config-system.md)); data-invariant violations are rejected before persistence (see [data-model.md](./data-model.md)); and git push failures warn on stderr without failing the command (see [git-sync.md](./git-sync.md)).
+
+## Testing
+
+End-to-end coverage lives in `tests/integration.rs`, driven through the non-interactive flags and environment overrides described in [Testability](#testability) above. Subsystem-level unit tests live alongside their modules under `src/`.

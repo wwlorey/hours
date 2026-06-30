@@ -1,3 +1,4 @@
+use assert_cmd::cargo::cargo_bin_cmd;
 use assert_cmd::Command;
 use assert_fs::TempDir;
 use chrono::Datelike;
@@ -6,7 +7,7 @@ use serde_json::Value;
 use std::fs;
 
 fn hours_cmd() -> Command {
-    Command::cargo_bin("hours").unwrap()
+    cargo_bin_cmd!("hours")
 }
 
 fn init_env(config_dir: &TempDir, data_dir: &TempDir) {
@@ -485,7 +486,7 @@ fn export_generates_pdf() {
     let pdf_files: Vec<_> = fs::read_dir(&exports_dir)
         .unwrap()
         .filter_map(|e| e.ok())
-        .filter(|e| e.path().extension().map_or(false, |ext| ext == "pdf"))
+        .filter(|e| e.path().extension().is_some_and(|ext| ext == "pdf"))
         .collect();
 
     assert_eq!(pdf_files.len(), 1, "Expected exactly one PDF file");

@@ -1,5 +1,5 @@
 ---
-status: in_progress
+status: closed
 priority: p3
 type: chore
 deps: []
@@ -22,3 +22,15 @@ backpressure for it. `cargo build` and `cargo test` are unaffected and pass.
 ## Source refs
 
 - tests/integration.rs — line 9 (cargo_bin) and line 488 (map_or)
+
+## Comments
+
+Fixed both lints in `tests/integration.rs`. The pinned `assert_cmd` 2.1.2 does
+provide the `cargo_bin_cmd!` macro the deprecation warning points to, so applied
+the real migration: imported `assert_cmd::cargo::cargo_bin_cmd` and replaced
+`Command::cargo_bin("hours").unwrap()` with `cargo_bin_cmd!("hours")` (the macro
+returns a `Command` directly, no `.unwrap()` needed). Replaced
+`.map_or(false, |ext| ext == "pdf")` with `.is_some_and(|ext| ext == "pdf")`.
+Backpressure: `cargo clippy --all-targets -- -D warnings` now clean,
+`cargo fmt --check` clean (required reordering the new import), `cargo test`
+green (96 unit + 20 integration tests pass).

@@ -1,6 +1,5 @@
-# List available recipes
-default:
-    @just --list
+# Default: build and install the hours binary
+default: install
 
 # Install the `hours` binary into ~/.cargo/bin
 install:

@@ -168,10 +168,11 @@ cargo clippy --workspace -- -D warnings  # Lint
 cargo fmt --all                          # Format
 ```
 
-A [`justfile`](justfile) wraps these commands as convenience aliases (run `just`
-to list them):
+A [`justfile`](justfile) wraps these commands as convenience aliases. A bare
+`just` runs `install`; use `just --list` to see all recipes:
 
 ```bash
+just          # default: cargo install --path . --force
 just install  # cargo install --path . --force
 just build    # cargo build
 just test     # cargo test --workspace

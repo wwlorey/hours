@@ -153,7 +153,7 @@ Licensure Progress
 Total supervised hours:    247.0 / 3000   (  8.2%)
 Direct client hours:       156.0 / 1200   ( 13.0%)
 Months of experience:        2   /   24   (  8.3%)
-Weekly average:             15.4 /   15.0 (102.7%)
+Weekly average:              9.8 /   15.0 ( 65.0%)
 
 Weeks logged: 16
 Date range: Jan 28, 2025 – May 19, 2025

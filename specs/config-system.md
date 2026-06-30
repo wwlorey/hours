@@ -55,7 +55,7 @@ min_weekly_average = 15.0
 | `total_hours_target` | `u32` | `3000` | Total supervised hours required |
 | `direct_hours_target` | `u32` | `1200` | Direct client contact hours required |
 | `min_months` | `u32` | `24` | Minimum months of continuous experience |
-| `min_weekly_average` | `f64` | `15.0` | Minimum average hours per week |
+| `min_weekly_average` | `f64` | `15.0` | Minimum average **direct** (client-contact) hours per week. Only the `direct` category counts toward this metric; indirect and supervision hours are excluded. See [summary-system.md § Weekly Average](./summary-system.md#weekly-average). |
 
 ## Environment Variable Overrides
 

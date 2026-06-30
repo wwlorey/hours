@@ -48,7 +48,7 @@ pub fn run(args: SummaryArgs) -> Result<()> {
     };
 
     let weekly_average = if weeks_elapsed > 0 {
-        total_hours / weeks_elapsed as f64
+        direct_hours / weeks_elapsed as f64
     } else {
         0.0
     };

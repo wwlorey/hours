@@ -401,6 +401,43 @@ fn summary_calculations() {
 }
 
 #[test]
+fn summary_weekly_average_counts_direct_only() {
+    // Date-independent: weekly_average must be derived from direct hours only.
+    // Logging only indirect hours yields total_hours > 0 but weekly_average == 0.0
+    // regardless of how many weeks have elapsed since the start date.
+    let config_dir = TempDir::new().unwrap();
+    let data_dir = TempDir::new().unwrap();
+    init_env(&config_dir, &data_dir);
+
+    add_hours_to_week(&config_dir, &data_dir, "2025-01-28", "indirect", "40.0");
+
+    let output = hours_cmd()
+        .env("HOURS_CONFIG_DIR", config_dir.path())
+        .env("HOURS_DATA_DIR", data_dir.path())
+        .env("HOURS_NO_GIT", "1")
+        .args(["summary", "--json"])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+
+    let json: Value = serde_json::from_slice(&output).unwrap();
+
+    let total_current = json["total_hours"]["current"].as_f64().unwrap();
+    assert!(
+        total_current > 0.0,
+        "total_hours should be > 0 after logging indirect hours, got {total_current}"
+    );
+
+    let weekly_avg = json["weekly_average"]["current"].as_f64().unwrap();
+    assert_eq!(
+        weekly_avg, 0.0,
+        "weekly_average must be direct-only, so 0.0 when only indirect hours logged, got {weekly_avg}"
+    );
+}
+
+#[test]
 fn summary_empty_state() {
     let config_dir = TempDir::new().unwrap();
     let data_dir = TempDir::new().unwrap();

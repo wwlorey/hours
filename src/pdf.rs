@@ -193,7 +193,7 @@ fn build_progress_summary(doc: &mut Document, data: &HoursData, config: &Licensu
     };
 
     let weekly_average = if weeks_elapsed > 0 {
-        total_hours / weeks_elapsed as f64
+        direct_hours / weeks_elapsed as f64
     } else {
         0.0
     };

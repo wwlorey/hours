@@ -47,7 +47,7 @@ Licensure Progress Summary
 Total supervised hours:    247.0 / 3000  ( 8.2%)
 Direct client hours:       156.0 / 1200  (13.0%)
 Months of experience:        2  /   24   ( 8.3%)
-Weekly average:             15.4 hrs/week (target: 15.0)
+Weekly average:              9.8 hrs/week (target: 15.0)
 Weeks logged:               16
 ```
 

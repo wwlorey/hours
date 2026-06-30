@@ -16,7 +16,7 @@ All targets are configurable in `config.toml` (see [config-system.md § `[licens
 | Total supervised hours | `total_hours_target` | 3,000 | Sum of all four hour categories across all weeks |
 | Direct client hours | `direct_hours_target` | 1,200 | Sum of `direct` across all weeks |
 | Minimum months | `min_months` | 24 | Calendar months from start date to today |
-| Weekly average | `min_weekly_average` | 15.0 | Total hours ÷ number of weeks elapsed |
+| Weekly average | `min_weekly_average` | 15.0 | Direct hours ÷ number of weeks elapsed |
 
 ## Calculations
 
@@ -49,11 +49,11 @@ Calculation: from `start_date` to `today`, count the number of complete months. 
 ```
 weeks_elapsed = number of Tue–Mon weeks from start_date through current week
               = ((current_week_start - start_date).num_days() / 7) + 1
-average = total_hours / weeks_elapsed
+average = direct_hours / weeks_elapsed
 percentage = average / min_weekly_average × 100
 ```
 
-`weeks_elapsed` counts all weeks in the tracking period, including weeks with zero logged hours. This reflects the licensure board's requirement for an _average_ of 15 hours/week across the full period.
+The numerator is **direct hours only** (`Σ week.direct`), not total supervised hours. The licensure board's weekly-average requirement applies to time spent in direct client contact; indirect hours and both supervision categories are excluded from this metric. `weeks_elapsed` counts all weeks in the tracking period, including weeks with zero logged hours, reflecting the requirement for an _average_ of 15 direct hours/week across the full period.
 
 ## Display Format
 
@@ -66,7 +66,7 @@ Licensure Progress
 Total supervised hours:    247.0 / 3000   (  8.2%)
 Direct client hours:       156.0 / 1200   ( 13.0%)
 Months of experience:        2   /   24   (  8.3%)
-Weekly average:             15.4 /   15.0 (102.7%)
+Weekly average:              9.8 /   15.0 ( 65.0%)
 
 Weeks logged: 16
 Date range: Jan 28, 2025 – May 19, 2025
@@ -101,9 +101,9 @@ With `--json`, output a single JSON object:
     "percentage": 8.3
   },
   "weekly_average": {
-    "current": 15.4,
+    "current": 9.8,
     "target": 15.0,
-    "percentage": 102.7
+    "percentage": 65.0
   },
   "weeks_logged": 16,
   "start_date": "2025-01-28",

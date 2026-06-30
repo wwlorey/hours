@@ -32,7 +32,7 @@ After any successful write to `hours.json`:
 
 1. `git -C <data_dir> add hours.json`
 2. `git -C <data_dir> commit -m "<message>"`
-3. If `auto_push` is enabled (see [config-system.md § `[git]`](./config-system.md#section-git)): `git -C <data_dir> push <remote> main`
+3. If `auto_push` is enabled (see [config-system.md § `[git]`](./config-system.md#section-git)): `git -C <data_dir> push <remote> <current-branch>` (the current branch is detected dynamically, falling back to `main`)
 
 All git commands use `-C <data_dir>` to operate on the data directory regardless of the user's current working directory.
 
@@ -86,7 +86,7 @@ The tool never fails or exits non-zero due to a push failure. Data integrity is 
    ```
 4. `git add .gitignore hours.json`
 5. `git commit -m "Initialize hours tracking"`
-6. `git push -u <remote> main`
+6. `git push -u <remote> <current-branch>` (the current branch is detected dynamically, falling back to `main`)
 
 If the remote repository does not exist, the push will fail. The user should create the repository on GitHub first. The warning will direct them:
 

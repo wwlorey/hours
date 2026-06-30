@@ -143,7 +143,7 @@ The "Date range" line is omitted when no weeks exist.
 
 ## Dependencies
 
-Reads licensure targets from configuration (see [config-system.md § `[licensure]`](./config-system.md#section-licensure)) and operates on the stored week data; uses `chrono` for month and week arithmetic and `comfy-table` for terminal formatting. The same metrics feed the PDF report (see [pdf-export.md](./pdf-export.md)).
+Reads licensure targets from configuration (see [config-system.md § `[licensure]`](./config-system.md#section-licensure)) and operates on the stored week data; uses `chrono` for month and week arithmetic and renders its output with plain `println!` formatting. The same metrics feed the PDF report (see [pdf-export.md](./pdf-export.md)).
 
 ## Error handling
 

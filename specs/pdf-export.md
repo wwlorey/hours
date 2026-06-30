@@ -76,7 +76,7 @@ Calculations are identical to `hours summary` (see [summary-system.md](./summary
 |----------|-------|
 | Paper size | US Letter (8.5" × 11") |
 | Margins | 1" on all sides |
-| Font family | Helvetica (built-in PDF font) |
+| Font family | Liberation Sans (bundled, SIL Open Font License) |
 | Title font size | 16pt bold |
 | Header font size | 10pt regular |
 | Table header font size | 9pt bold |

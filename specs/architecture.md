@@ -70,9 +70,10 @@ hours/
 | `serde` + `serde_json` | JSON serialization and deserialization |
 | `toml` | TOML config file parsing |
 | `genpdf` | PDF report generation |
-| `comfy-table` | Terminal table formatting for `list` and `summary` |
+| `comfy-table` | Terminal table formatting for `list` |
 | `dirs` | XDG-compliant home/config directory resolution |
 | `shellexpand` | Tilde expansion for paths in config |
+| `anyhow` | Error handling and context propagation |
 
 ### Dev Dependencies
 
@@ -81,7 +82,7 @@ hours/
 | `assert_cmd` | Integration test harness for running the compiled binary |
 | `assert_fs` | Temporary directories and file assertions |
 | `predicates` | Output matching in integration tests |
-| `serde_json` | JSON parsing in test assertions |
+| `tempfile` | Temporary directories for unit tests |
 
 ## Testability
 

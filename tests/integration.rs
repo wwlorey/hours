@@ -81,6 +81,23 @@ fn load_data(data_dir: &TempDir) -> Value {
 }
 
 #[test]
+fn version_flag_prints_version() {
+    let expected = format!("hours {}", env!("CARGO_PKG_VERSION"));
+
+    hours_cmd()
+        .arg("--version")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains(&expected));
+
+    hours_cmd()
+        .arg("-V")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains(&expected));
+}
+
+#[test]
 fn initialize_fresh_setup() {
     let config_dir = TempDir::new().unwrap();
     let data_dir = TempDir::new().unwrap();

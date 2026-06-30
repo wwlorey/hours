@@ -1,5 +1,5 @@
 ---
-status: in_progress
+status: closed
 priority: p3
 type: chore
 deps: []
@@ -26,3 +26,14 @@ the documented version check could not pass.
 
 Discovered during the justfile work (`add-just-install-recipe`). Not fixed
 there to keep that change scoped to tooling/docs.
+
+### 2026-06-30 — closed
+
+Added `version` to the top-level `#[command(...)]` attribute on `Cli` in
+`src/cli/mod.rs`, which picks up `CARGO_PKG_VERSION`. Verify gate (live run):
+`cargo run -- --version` and the built `./target/debug/hours -V` both print
+`hours 0.1.0`; `hours --help` still parses and now lists `-V, --version`. Added
+integration test `version_flag_prints_version` in `tests/integration.rs`
+asserting both `--version` and `-V` output the version string. Backpressure
+green: `cargo fmt --check`, `cargo clippy --workspace -- -D warnings`, and
+`cargo test --workspace` (117 tests) all pass.

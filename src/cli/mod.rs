@@ -8,7 +8,7 @@ mod summary;
 use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
-#[command(name = "hours", about = "Track counseling licensure hours")]
+#[command(name = "hours", version, about = "Track counseling licensure hours")]
 pub struct Cli {
     #[command(subcommand)]
     pub command: Command,

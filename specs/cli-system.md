@@ -139,8 +139,13 @@ Display a table of all logged weeks sorted by start date ascending.
 │ Feb 04 – Feb 10, 2025  │   1.0  │   1.5  │  12.0  │     4.0  │  18.5 │
 ├────────────────────────┼────────┼────────┼────────┼──────────┼───────┤
 │ TOTALS                 │  12.0  │  21.0  │ 156.0  │    58.0  │ 247.0 │
+├────────────────────────┼────────┼────────┼────────┼──────────┼───────┤
+│ Week                   │ Ind Sv │ Grp Sv │ Direct │ Indirect │ Total │
 └────────────────────────┴────────┴────────┴────────┴──────────┴───────┘
 ```
+
+The column header row is repeated below the TOTALS row (rendered plain, identical
+to the top header) so the column labels stay visible when the table is tall.
 
 **Flags:**
 

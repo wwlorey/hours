@@ -307,7 +307,7 @@ fn list_output_table() {
     add_hours_to_week(&config_dir, &data_dir, "2025-01-28", "direct", "5.0");
     add_hours_to_week(&config_dir, &data_dir, "2025-02-04", "direct", "3.0");
 
-    hours_cmd()
+    let output = hours_cmd()
         .env("HOURS_CONFIG_DIR", config_dir.path())
         .env("HOURS_DATA_DIR", data_dir.path())
         .env("HOURS_NO_GIT", "1")
@@ -316,7 +316,19 @@ fn list_output_table() {
         .success()
         .stdout(predicate::str::contains("Jan 28"))
         .stdout(predicate::str::contains("Feb 04"))
-        .stdout(predicate::str::contains("TOTALS"));
+        .stdout(predicate::str::contains("TOTALS"))
+        .get_output()
+        .stdout
+        .clone();
+
+    // The column headers are repeated below the TOTALS row so they stay
+    // visible on tall tables — a distinctive header label appears twice.
+    let stdout = String::from_utf8(output).unwrap();
+    assert_eq!(
+        stdout.matches("Ind Sv").count(),
+        2,
+        "column header should appear at both top and bottom of the table"
+    );
 }
 
 #[test]

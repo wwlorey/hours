@@ -62,14 +62,16 @@ pub fn run(args: ListArgs) -> Result<()> {
             .load_preset(UTF8_FULL)
             .apply_modifier(UTF8_ROUND_CORNERS);
 
-        table.set_header(vec![
+        let headers: [&'static str; 6] = [
             "Week",
             Category::IndividualSupervision.display_name(),
             Category::GroupSupervision.display_name(),
             Category::Direct.display_name(),
             Category::Indirect.display_name(),
             "Total",
-        ]);
+        ];
+
+        table.set_header(headers.to_vec());
 
         let mut total_ind = 0.0;
         let mut total_grp = 0.0;
@@ -106,6 +108,10 @@ pub fn run(args: ListArgs) -> Result<()> {
             Cell::new(format!("{total_indirect:.1}")).add_attribute(Attribute::Bold),
             Cell::new(format!("{grand_total:.1}")).add_attribute(Attribute::Bold),
         ]);
+
+        // Repeat the column headers below TOTALS so they stay visible on tall
+        // tables. Rendered plain (no bold), identical to the top header.
+        table.add_row(headers.to_vec());
 
         println!("{table}");
     }

@@ -1,5 +1,5 @@
 ---
-status: in_progress
+status: closed
 priority: p2
 type: bug
 deps: []
@@ -42,3 +42,27 @@ categories; denominator `weeks_elapsed` unchanged; `min_weekly_average` key name
 and 15.0 default unchanged. Worked examples across summary-system.md,
 cli-system.md, and pdf-export.md all use weeks_elapsed = 16: 247.0 total ÷ 16 ≈
 15.4 hrs/week, 15.4 / 15.0 ≈ 102.9%.
+
+### 2026-07-07 — close
+
+Implemented per the approved plan. src/cli/summary.rs and src/pdf.rs numerators
+switched direct_hours -> total_hours (direct_hours bindings retained for the
+Direct client hours metric). Integration test inverted/renamed and now logs
+indirect (40.0) + group_supervision (2.0) with zero direct, asserting
+weekly_average > 0.0. Specs updated in lock-step (summary-system, config-system,
+cli-system, pdf-export).
+
+Backpressure green: cargo fmt --all, cargo test --workspace (104 unit + 22
+integration, count unchanged), cargo clippy --workspace --all-targets -D warnings
+all clean. specs/validate clean.
+
+Verify gate (live binary, zero direct hours: 40 indirect + 6 group_supervision):
+`hours summary` prints "Weekly average: 0.6 / 15.0 (4.0%)" and "Direct client
+hours: 0.0" — non-zero average confirms the direct-only regression is reversed.
+PDF path also verified live: pdftotext shows "Weekly average: 0.6 hrs/week
+(target: 15.0)". Both CLI and PDF verified end-to-end; no residual.
+
+Code-review gate (9-file cumulative diff): no correctness or introduced findings.
+One pre-existing spec/behavior drift surfaced (summary --json emits alphabetical
+key order vs the spec's insertion order) — unrelated to this reversal, filed as
+`json-key-order-drift` (open, p3).

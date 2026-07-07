@@ -1,5 +1,5 @@
 ---
-status: in_progress
+status: closed
 priority: p3
 type: bug
 deps: []
@@ -35,3 +35,14 @@ behavior is unaffected; only the spec's illustrative glyphs disagree.
 
 Filed from the code-review gate of `weekly-average-count-all-categories`. Not a
 regression from that work; left open for a future pass.
+
+### 2026-07-07 — close
+
+Reordered the four metric-object JSON examples (`total_hours`, `direct_hours`,
+`months`, `weekly_average`) in `specs/summary-system.md` from insertion order to
+alphabetical (`current`, `percentage`, `target`) to match the actual
+`serde_json::json!` BTreeMap output, and added a prose note documenting the
+alphabetical ordering. Numeric values unchanged. No Rust source or runtime
+behavior changed. Verified against the real binary: `hours summary --json` emits
+each metric object as `current`, `percentage`, `target`. specs/validate, the
+full test suite (126 tests), clippy `-D warnings`, and `fmt --check` all pass.

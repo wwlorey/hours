@@ -96,23 +96,23 @@ With `--json`, output a single JSON object:
 {
   "total_hours": {
     "current": 247.0,
-    "target": 3000,
-    "percentage": 8.2
+    "percentage": 8.2,
+    "target": 3000
   },
   "direct_hours": {
     "current": 156.0,
-    "target": 1200,
-    "percentage": 13.0
+    "percentage": 13.0,
+    "target": 1200
   },
   "months": {
     "current": 2,
-    "target": 24,
-    "percentage": 8.3
+    "percentage": 8.3,
+    "target": 24
   },
   "weekly_average": {
     "current": 15.4,
-    "target": 15.0,
-    "percentage": 102.9
+    "percentage": 102.9,
+    "target": 15.0
   },
   "weeks_logged": 16,
   "start_date": "2025-01-28",
@@ -120,6 +120,11 @@ With `--json`, output a single JSON object:
   "latest_week_end": "2025-05-19"
 }
 ```
+
+Within each metric object the keys are emitted in alphabetical order
+(`current`, `percentage`, `target`) because the object is built via
+`serde_json::json!`, which backs objects with a `BTreeMap` (the `preserve_order`
+feature is not enabled).
 
 This format is used by integration tests to verify calculation correctness (see [architecture.md § Testability](./architecture.md#testability)).
 

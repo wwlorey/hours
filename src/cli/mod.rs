@@ -1,4 +1,5 @@
 mod add;
+mod browse;
 mod edit;
 mod export;
 mod init;
@@ -25,6 +26,7 @@ pub enum Command {
     List(list::ListArgs),
     Summary(summary::SummaryArgs),
     Export(export::ExportArgs),
+    Browse(browse::BrowseArgs),
 }
 
 pub fn run(cli: Cli) -> anyhow::Result<()> {
@@ -35,5 +37,6 @@ pub fn run(cli: Cli) -> anyhow::Result<()> {
         Command::List(args) => list::run(args),
         Command::Summary(args) => summary::run(args),
         Command::Export(args) => export::run(args, cli.no_git),
+        Command::Browse(args) => browse::run(args),
     }
 }

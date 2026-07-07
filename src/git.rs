@@ -142,6 +142,69 @@ pub fn git_sync(data_dir: &Path, config: &GitConfig, message: &str, no_git: bool
     Ok(())
 }
 
+/// Resolve the data directory's git remote to a browsable HTTPS web URL.
+///
+/// Shells out to `git -C <data_dir> remote get-url <remote_name>` and
+/// normalizes the raw remote (SSH/scp/https) into a clean `https://` URL.
+pub fn remote_web_url(data_dir: &Path, remote_name: &str) -> Result<String> {
+    if !git_binary_exists() {
+        bail!("git is not installed. Install git and try again.");
+    }
+    if !is_git_repo(data_dir) {
+        bail!("Data directory is not a git repository. Run 'hours init' to set up.");
+    }
+
+    let output = run_git(data_dir, &["remote", "get-url", remote_name])?;
+    if !output.status.success() {
+        bail!("No git remote '{remote_name}' configured.");
+    }
+
+    let raw = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    if raw.is_empty() {
+        bail!("No git remote '{remote_name}' configured.");
+    }
+
+    Ok(normalize_remote_url(&raw))
+}
+
+/// Convert a raw git remote URL into a browsable HTTPS web URL. Host-agnostic.
+///
+/// Handles scp-style shorthand (`git@host:user/repo.git`), explicit
+/// `ssh://git@host/user/repo.git`, and `https://host/user/repo.git`, stripping a
+/// single trailing `.git` and any trailing slash.
+fn normalize_remote_url(raw: &str) -> String {
+    let raw = raw.trim();
+
+    let mut url = if let Some(rest) = raw.strip_prefix("ssh://") {
+        // ssh://[user@]host/path
+        let rest = rest.split_once('@').map(|(_, h)| h).unwrap_or(rest);
+        format!("https://{rest}")
+    } else if raw.starts_with("http://") || raw.starts_with("https://") {
+        raw.to_string()
+    } else if let Some((host_part, path)) = raw.split_once(':') {
+        // scp shorthand: [user@]host:user/repo.git
+        let host = host_part
+            .split_once('@')
+            .map(|(_, h)| h)
+            .unwrap_or(host_part);
+        format!("https://{host}/{path}")
+    } else {
+        raw.to_string()
+    };
+
+    while url.ends_with('/') {
+        url.pop();
+    }
+    if let Some(stripped) = url.strip_suffix(".git") {
+        url = stripped.to_string();
+    }
+    while url.ends_with('/') {
+        url.pop();
+    }
+
+    url
+}
+
 pub fn git_init_and_commit(
     data_dir: &Path,
     config: &GitConfig,
@@ -379,6 +442,79 @@ mod tests {
 
         let result = git_push(data_dir, "origin");
         assert!(result.is_ok());
+    }
+
+    #[test]
+    fn normalize_scp_shorthand() {
+        assert_eq!(
+            normalize_remote_url("git@github.com:test/test.git"),
+            "https://github.com/test/test"
+        );
+    }
+
+    #[test]
+    fn normalize_ssh_url() {
+        assert_eq!(
+            normalize_remote_url("ssh://git@github.com/user/repo.git"),
+            "https://github.com/user/repo"
+        );
+    }
+
+    #[test]
+    fn normalize_https_strips_git_suffix() {
+        assert_eq!(
+            normalize_remote_url("https://github.com/user/repo.git"),
+            "https://github.com/user/repo"
+        );
+    }
+
+    #[test]
+    fn normalize_clean_https_unchanged() {
+        assert_eq!(
+            normalize_remote_url("https://github.com/user/repo"),
+            "https://github.com/user/repo"
+        );
+    }
+
+    #[test]
+    fn normalize_strips_trailing_slash() {
+        assert_eq!(
+            normalize_remote_url("https://gitlab.com/user/repo/"),
+            "https://gitlab.com/user/repo"
+        );
+    }
+
+    #[test]
+    fn remote_web_url_fails_if_not_repo() {
+        let tmp = TempDir::new().unwrap();
+        let result = remote_web_url(tmp.path(), "origin");
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("not a git repository"));
+    }
+
+    #[test]
+    fn remote_web_url_resolves_ssh_remote() {
+        let tmp = TempDir::new().unwrap();
+        let data_dir = tmp.path();
+        git_init(data_dir, "origin", "git@github.com:test/test.git").unwrap();
+        let url = remote_web_url(data_dir, "origin").unwrap();
+        assert_eq!(url, "https://github.com/test/test");
+    }
+
+    #[test]
+    fn remote_web_url_fails_when_remote_missing() {
+        let tmp = TempDir::new().unwrap();
+        let data_dir = tmp.path();
+        setup_git_repo(data_dir);
+        let result = remote_web_url(data_dir, "origin");
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("No git remote 'origin' configured"));
     }
 
     #[test]

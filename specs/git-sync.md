@@ -16,6 +16,8 @@ Every data mutation (`add`, `edit`) automatically commits and pushes the data fi
 
 Git integration lives in `src/git.rs` and shells out to the `git` CLI, always using `git -C <data_dir>` so operations target the data directory regardless of the working directory. Commit and (optionally) push run synchronously after each successful write to `hours.json` (see [Commit Behavior](#commit-behavior)).
 
+`hours browse` also lives here as a read-only operation: it runs `git -C <data_dir> remote get-url <remote>` and normalizes the result to an HTTPS web URL, without committing or pushing (see [cli-system.md § `hours browse`](./cli-system.md#hours-browse)).
+
 ## Dependencies
 
 Requires the `git` CLI on `PATH` (see [Prerequisites](#prerequisites)); no git library is linked. The data directory and remote are established during `hours init`, and push behavior is governed by the `[git]` config section (see [config-system.md § `[git]`](./config-system.md#section-git)).

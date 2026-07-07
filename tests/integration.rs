@@ -97,6 +97,39 @@ fn version_flag_prints_version() {
         .stdout(predicate::str::contains(&expected));
 }
 
+fn git_init_with_remote(data_dir: &TempDir, remote_url: &str) {
+    use std::process::Command as StdCommand;
+    StdCommand::new("git")
+        .args(["init"])
+        .current_dir(data_dir.path())
+        .output()
+        .unwrap();
+    StdCommand::new("git")
+        .args(["remote", "add", "origin", remote_url])
+        .current_dir(data_dir.path())
+        .output()
+        .unwrap();
+}
+
+#[test]
+fn browse_print_resolves_remote_web_url() {
+    let config_dir = TempDir::new().unwrap();
+    let data_dir = TempDir::new().unwrap();
+    init_env(&config_dir, &data_dir);
+
+    // init_env runs with --no-git, so the data dir is not yet a git repo.
+    // Establish the repo and SSH remote that `hours browse` reads.
+    git_init_with_remote(&data_dir, "git@github.com:test/test.git");
+
+    hours_cmd()
+        .env("HOURS_CONFIG_DIR", config_dir.path())
+        .env("HOURS_DATA_DIR", data_dir.path())
+        .args(["browse", "--print"])
+        .assert()
+        .success()
+        .stdout("https://github.com/test/test\n");
+}
+
 #[test]
 fn initialize_fresh_setup() {
     let config_dir = TempDir::new().unwrap();

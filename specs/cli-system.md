@@ -10,11 +10,11 @@ refs: [config-system, git-sync, pdf-export, summary-system]
 
 ## Overview
 
-The CLI provides six commands for managing licensure hours. Interactive prompts use vim-style key bindings for navigation. All mutating commands support a `--non-interactive` flag for scripting and testing.
+The CLI provides seven commands for managing licensure hours. Interactive prompts use vim-style key bindings for navigation. All mutating commands support a `--non-interactive` flag for scripting and testing.
 
 ## Architecture
 
-The CLI is defined with `clap` in `src/cli/mod.rs`, which dispatches each subcommand to its handler module (`init.rs`, `add.rs`, `edit.rs`, `list.rs`, `summary.rs`, `export.rs`). Interactive prompts are implemented on `crossterm` in `src/ui/prompts.rs` using the nested-screen, back-navigation model described under [Interactive Prompts](#interactive-prompts).
+The CLI is defined with `clap` in `src/cli/mod.rs`, which dispatches each subcommand to its handler module (`init.rs`, `add.rs`, `edit.rs`, `list.rs`, `summary.rs`, `export.rs`, `browse.rs`). Interactive prompts are implemented on `crossterm` in `src/ui/prompts.rs` using the nested-screen, back-navigation model described under [Interactive Prompts](#interactive-prompts).
 
 ## Commands
 
@@ -194,6 +194,22 @@ Generate a PDF report. See [pdf-export.md](./pdf-export.md) for layout details.
 
 - `--output PATH` — Override output file path.
 - `--open` — Open the PDF after generation (macOS: `open`, Linux: `xdg-open`).
+
+### `hours browse`
+
+Open the data-directory repo's git remote in the default web browser.
+
+**Behavior:**
+
+1. Load config and resolve the data directory's git remote via a read-only `git -C <data_dir> remote get-url <remote>` (default remote `origin`; see [git-sync.md](./git-sync.md)).
+2. Normalize the raw remote into a browsable HTTPS URL — host-agnostic. scp-style shorthand (`git@github.com:user/repo.git`) and `ssh://git@github.com/user/repo.git` become `https://github.com/user/repo`; a trailing `.git` and any trailing slash are stripped; an already-clean `https://` URL is left unchanged.
+3. Open the URL in the default browser (macOS: `open`, Linux: `xdg-open`).
+
+**Flags:**
+
+- `--print` — Print the resolved HTTPS URL to stdout and exit without launching a browser.
+
+**Errors:** git not installed, the data directory is not a git repository, or the remote is not configured each exit non-zero with a clear message (e.g. `Error: No git remote 'origin' configured.`).
 
 ## Non-Interactive Mode
 

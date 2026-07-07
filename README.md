@@ -100,6 +100,17 @@ hours export --output report.pdf      # Custom output path
 hours export --open                   # Open after generating
 ```
 
+### `hours browse`
+
+Opens the data repository's git remote in your default web browser. Resolves the
+remote from the data directory (`git remote get-url`) and converts SSH remotes to
+HTTPS.
+
+```bash
+hours browse            # Open the remote's web page
+hours browse --print    # Print the resolved URL instead of opening a browser
+```
+
 ### Global Flags
 
 - `--no-git` — Disable git operations for any command

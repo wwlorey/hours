@@ -1,1 +1,6 @@
 /target
+
+# Runtime artifacts written by `hours init` when run from the repo root
+# (config.toml is the tool's config file; .hours/ its default data dir)
+/config.toml
+/.hours/

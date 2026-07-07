@@ -31,7 +31,8 @@ hours/
 │   │   ├── edit.rs          # `hours edit` command
 │   │   ├── list.rs          # `hours list` command
 │   │   ├── summary.rs       # `hours summary` command
-│   │   └── export.rs        # `hours export` command
+│   │   ├── export.rs        # `hours export` command
+│   │   └── browse.rs        # `hours browse` command
 │   ├── config.rs            # Configuration loading and parsing
 │   ├── data/
 │   │   ├── mod.rs           # Data module re-exports

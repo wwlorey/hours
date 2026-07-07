@@ -1,5 +1,6 @@
 ---
-status: open
+status: closed
+resolution: wontfix
 priority: p3
 type: security
 deps: []
@@ -8,6 +9,17 @@ deps: []
 # Validate resolved browse URL is `https://` before opening
 
 Severity: LOW (INTRODUCED-BY-SLATE, commit 29cf527)
+
+## Resolution: wontfix
+
+Closed as won't-fix. Exploiting this requires the attacker to already control the
+user's own data-directory git config — at which point git hooks are a far
+stronger vector, so the added `https://` guard buys little. Colon-bearing
+malicious schemes (`javascript:`, `file:`) are already neutralized into
+`https://host/...` by the scp-shorthand branch. The residual case is a
+user-configured local-path or `-`-leading remote opening a local file or an
+`open`/`xdg-open` flag rather than a web page — a self-inflicted config error, not
+an external attack. Not worth the extra validation surface.
 
 ## Problem
 

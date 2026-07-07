@@ -60,3 +60,12 @@ rendered weekly-average value was verified only via the shared code path and uni
 tests, not by opening a generated PDF and reading the glyphs; a human eyeballing an
 exported PDF could still catch a layout/label regression. The CLI text path was
 verified live end-to-end.
+
+### 2026-07-07 — superseded
+
+Reversed by `weekly-average-count-all-categories`. The direct-only measurement
+change made here has been undone: the weekly-average numerator is now TOTAL
+supervised hours (`Σ w.total()`, all four categories) again, per the licensure
+board's requirement for an average pace of supervised experience. Denominator
+(`weeks_elapsed`) and target (`min_weekly_average = 15.0`) remain unchanged. This
+issue stays `closed`; see the superseding issue for the reversal details.
